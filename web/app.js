@@ -1,11 +1,14 @@
-// Tink frontend: records a clip from the mic, sends it to the FastAPI backend, speaks the phrase.
+// Tink frontend: records a clip (and webcam cues), sends both to the backend, shows the
+// Bayesian ranking, and speaks what the LLM (or the enrolled phrase) says.
 (() => {
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const pct = (p) => `${Math.round(p * 100)}%`;
+  const cueLabel = (c) => c.replace("_", " ");
   const stage = $("stage"), phrase = $("phrase"), why = $("why"), statusText = $("statusText");
 
-  let sounds = [], threshold = 0;
-  let muted = false, lastPhrase = null, busy = false;
+  let sounds = [], threshold = 0, allCues = [], llmModel = null;
+  let muted = false, lastSaid = null, lastName = null, busy = false, lastAsk = false;
   const log = [];
 
   // ---------- API ----------
@@ -18,6 +21,9 @@
   async function refresh(lit) {
     const r = await api("/api/sounds");
     sounds = r.sounds; threshold = r.threshold;
+    if (!allCues.length) { allCues = r.cues; renderCueBoxes(); }
+    llmModel = r.llm.on ? r.llm.model : null;
+    $("mode").textContent = llmModel ? `voc2vec + ${llmModel}` : "voc2vec · no LLM key, using taught phrases";
     renderSounds(lit);
   }
 
@@ -72,10 +78,29 @@
   const setLevel = (v) => bars.style.setProperty("--lvl", v.toFixed(2));
   function micError(e) {
     if (e.message === "silence") return "Tink didn't hear anything. Move closer to the mic and try again.";
-    if (e.name === "NotAllowedError") return "Tink needs the microphone. Allow it in the browser's address bar, then try again.";
-    if (e.name === "NotFoundError") return "No microphone found. Plug one in and try again.";
+    if (e.name === "NotAllowedError") return "Tink needs permission. Allow it in the browser's address bar, then try again.";
+    if (e.name === "NotFoundError") return "No microphone or camera found. Plug one in and try again.";
     return e.message;
   }
+
+  // ---------- Camera cues ----------
+  $("camera").addEventListener("change", async (e) => {
+    $("camNote").hidden = !e.target.checked;
+    if (!e.target.checked) { window.TinkCues?.disable(); $("cam").hidden = true; return; }
+    if (!window.TinkCues) { e.target.checked = false; $("camNote").hidden = true; $("hint").textContent = "The camera module is still loading. Try again in a second."; return; }
+    $("cam").hidden = false;
+    $("liveCues").innerHTML = `<span class="cue">starting camera...</span>`;
+    try {
+      await window.TinkCues.enable($("video"), (live, face) => {
+        $("liveCues").innerHTML = face
+          ? allCues.map((c) => `<span class="cue${live.includes(c) ? " on" : ""}">${cueLabel(c)}</span>`).join("")
+          : `<span class="cue">no face in view</span>`;
+      });
+    } catch (err) {
+      e.target.checked = false; $("cam").hidden = true; $("camNote").hidden = true;
+      $("hint").textContent = micError(err);
+    }
+  });
 
   // ---------- Sound: chime + voice ----------
   function chime(ok) {
@@ -100,34 +125,25 @@
   // ---------- Listen ----------
   const setStage = (state, status) => { stage.className = `stage ${state}`; statusText.textContent = status; };
   const clock = () => new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }).replace(/\s?[AP]M/i, "");
+  const hideResult = () => { for (const id of ["ranked", "feedback", "packetBox", "taught"]) $(id).hidden = true; };
 
   async function listen() {
     if (busy || !sounds.length) return;
     busy = true; $("listen").disabled = true;
     setStage("listening", "Listening...");
-    phrase.textContent = ""; why.textContent = "";
+    phrase.textContent = ""; why.textContent = ""; hideResult();
     renderSounds();
     try {
-      const clip = await recordClip();
-      setStage("listening", "Thinking...");
-      const fd = new FormData(); fd.append("audio", clip, "clip.wav");
-      const r = await api("/api/recognize", { method: "POST", body: fd });
-      if (r.matched) {
-        const s = sounds.find((x) => x.name === r.name);
-        setStage("heard", "Heard you");
-        phrase.textContent = r.phrase;
-        why.innerHTML = `Heard <b>${esc(r.name.toLowerCase())}</b> with a <span class="conf">${r.score.toFixed(2)}</span> match`;
-        lastPhrase = r.phrase; $("repeat").disabled = false;
-        addLog(r.phrase, r.score, false);
-        renderSounds(s && s.name);
-        chime(true); speak(r.phrase); burst();
-      } else {
-        setStage("missed", "Not sure");
-        phrase.textContent = "I didn't catch that.";
-        why.innerHTML = `Closest match <span class="conf">${r.score.toFixed(2)}</span> is below ${threshold.toFixed(2)}. Try the sound again.`;
-        addLog("Didn't catch that", r.score, true);
-        chime(false);
-      }
+      window.TinkCues?.isOn() && window.TinkCues.begin();
+      let clip;
+      let cues = [];
+      try { clip = await recordClip(); } finally { cues = window.TinkCues?.end() ?? []; }
+      setStage("listening", "Matching the sound...");
+      const slow = llmModel && setTimeout(() => { statusText.textContent = `Wording it with ${llmModel}...`; }, 700);
+      const fd = new FormData();
+      fd.append("audio", clip, "clip.wav");
+      fd.append("cues", JSON.stringify(cues));
+      try { showResult(await api("/api/recognize", { method: "POST", body: fd })); } finally { clearTimeout(slow); }
     } catch (e) {
       if (e.message === "silence" && $("loop").checked) { busy = false; return listen(); }
       setStage("error", "Stopped");
@@ -136,14 +152,69 @@
       $("loop").checked = false;
     }
     busy = false; $("listen").disabled = !sounds.length;
-    if ($("loop").checked) setTimeout(listen, 900);
+    if ($("loop").checked) setTimeout(listen, lastAsk ? 2500 : 900);
     else if (!stage.classList.contains("error")) statusText.textContent = "Ready";
   }
 
-  function addLog(text, c, miss) {
-    log.push({ t: clock(), text, c, miss });
+
+  function showResult(r) {
+    lastAsk = r.ask; lastName = r.name;
+    const top = r.ranked[0];
+    setStage(r.matched && !r.ask ? "heard" : "missed", r.ask ? "Checking" : "Heard you");
+    phrase.textContent = r.say;
+    const cueText = r.packet.webcam_cues.length ? ` · saw ${r.packet.webcam_cues.map(cueLabel).join(", ")}` : "";
+    const via = r.source === "grok" ? "worded by Grok" : "enrolled phrase";
+    why.innerHTML = r.matched
+      ? `Heard <b>${esc(top.name.toLowerCase())}</b> · ${pct(top.p)} sure${cueText} · ${via}`
+      : `Nothing matched well enough${cueText}`;
+
+    $("ranked").innerHTML = r.ranked.slice(0, 3).map((x) => `
+      <li class="${x.name === "unknown" ? "unknown" : ""}">
+        <span>${x.name === "unknown" ? "Didn't catch it" : esc(x.name)}</span>
+        <span class="p"><b>${pct(x.p)}</b> · audio alone ${pct(x.audio_p)}</span>
+        <span class="bar" style="width:${Math.max(2, x.p * 100)}%"></span>
+      </li>`).join("");
+    $("ranked").hidden = false;
+    $("packet").textContent = JSON.stringify(r.packet, null, 2);
+    $("packetBox").hidden = false;
+    $("feedback").hidden = !r.matched;
+    $("right").hidden = $("wrong").hidden = false;
+    $("feedbackMsg").textContent = "Did Tink get it right?";
+
+    // When Grok rewords a phrase, show the taught phrase next to it with a way back to it.
+    const taught = sounds.find((s) => s.name === r.name)?.phrase;
+    $("taught").hidden = !(r.source === "grok" && r.matched && !r.ask && taught && taught !== r.say);
+    $("taughtText").textContent = taught || "";
+
+    lastSaid = r.say; $("repeat").disabled = false;
+    addLog(r.say, top.p, !r.matched);
+    if (r.matched) renderSounds(r.name);
+    chime(r.matched && !r.ask); speak(r.say);
+    if (r.matched && !r.ask) burst();
+  }
+
+  function feedbackDone(msg) {
+    $("right").hidden = $("wrong").hidden = true;
+    $("feedbackMsg").textContent = msg;
+  }
+  $("right").addEventListener("click", async () => {
+    try {
+      await api("/api/confirm", { method: "POST", body: new URLSearchParams({ name: lastName }) });
+      feedbackDone("Thanks. Tink will remember this time of day.");
+    } catch (e) { feedbackDone(e.message); }
+  });
+  $("wrong").addEventListener("click", () => feedbackDone("Got it. Try the sound again, or teach Tink more takes."));
+  $("useTaught").addEventListener("click", () => {
+    const text = $("taughtText").textContent;
+    phrase.textContent = text; lastSaid = text; speak(text);
+    $("taught").hidden = true;
+    why.innerHTML += " · switched to the taught phrase";
+  });
+
+  function addLog(text, p, miss) {
+    log.push({ t: clock(), text, p, miss });
     $("log").innerHTML = log.slice().reverse().map((e) =>
-      `<li><time>${e.t}</time><span class="${e.miss ? "miss" : ""}">${esc(e.text)}</span><span class="c">${e.c.toFixed(2)}</span></li>`).join("");
+      `<li><time>${e.t}</time><span class="${e.miss ? "miss" : ""}">${esc(e.text)}</span><span class="c">${pct(e.p)}</span></li>`).join("");
     $("logEmpty").hidden = true;
   }
 
@@ -156,12 +227,13 @@
         <span class="takes" aria-label="${s.takes} takes">${dots(s.takes)}</span>
         <button class="forget" data-name="${esc(s.name)}">Forget</button>
         <span class="says">says "${esc(s.phrase)}"</span>
+        ${s.cues.length ? `<span class="cuelist">${s.cues.map((c) => `<span class="cue">${cueLabel(c)}</span>`).join("")}</span>` : ""}
       </li>`).join("");
     $("soundsEmpty").hidden = sounds.length > 0;
     $("count").textContent = sounds.length ? `${sounds.length} sound${sounds.length > 1 ? "s" : ""}` : "";
     $("listen").disabled = busy || !sounds.length;
     if (!sounds.length && !busy) {
-      setStage("idle", "Ready");
+      setStage("idle", "Ready"); hideResult();
       phrase.textContent = "Teach Tink a sound to begin.";
       why.textContent = 'Use "Teach a new sound" on the right.';
     } else if (stage.classList.contains("idle") && phrase.textContent.startsWith("Teach")) {
@@ -169,18 +241,33 @@
       why.textContent = "Press Listen, or turn on Keep listening.";
     }
   }
+  // Forgetting deletes the recorded takes, so it asks once, inline, and waits for an answer.
   $("sounds").addEventListener("click", async (e) => {
-    const b = e.target.closest(".forget");
-    if (!b) return;
-    if (!b.classList.contains("armed")) {
-      b.classList.add("armed"); b.textContent = "Tap again to forget";
-      return setTimeout(() => { b.classList.remove("armed"); b.textContent = "Forget"; }, 3000);
+    const forget = e.target.closest(".forget"), yes = e.target.closest(".confirm-yes"), no = e.target.closest(".confirm-no");
+    if (forget) {
+      const li = forget.closest(".sound");
+      if (li.querySelector(".confirm-row")) return;
+      const s = sounds.find((x) => x.name === forget.dataset.name);
+      li.insertAdjacentHTML("beforeend", `
+        <div class="confirm-row" role="group" aria-label="Confirm forget">
+          <span>Forget "${esc(s.name)}" and its ${s.takes} recorded take${s.takes === 1 ? "" : "s"}?</span>
+          <button class="btn danger small confirm-yes" data-name="${esc(s.name)}">Forget</button>
+          <button class="btn quiet small confirm-no">Cancel</button>
+        </div>`);
+      li.querySelector(".confirm-no").focus();
+    } else if (no) {
+      no.closest(".confirm-row").remove();
+    } else if (yes) {
+      try { await api(`/api/sounds/${encodeURIComponent(yes.dataset.name)}`, { method: "DELETE" }); await refresh(); }
+      catch (err) { $("err").textContent = err.message; }
     }
-    try { await api(`/api/sounds/${encodeURIComponent(b.dataset.name)}`, { method: "DELETE" }); await refresh(); }
-    catch (err) { $("err").textContent = err.message; }
   });
 
   // ---------- Enroll ----------
+  function renderCueBoxes() {
+    $("cueBoxes").innerHTML = allCues.map((c) =>
+      `<label><input type="checkbox" name="cue" value="${c}" id="cue-${c}"> ${cueLabel(c)}</label>`).join("");
+  }
   let enrollTakes = 0;
   const drawTakes = () => { $("enrollDots").innerHTML = enrollTakes ? dots(enrollTakes) + `<span class="help">&nbsp;${enrollTakes} of 5</span>` : ""; };
   $("enroll").addEventListener("submit", async (e) => {
@@ -192,7 +279,9 @@
     try {
       const clip = await recordClip({ maxMs: 4000 });
       btn.textContent = "Saving...";
-      const fd = new FormData(); fd.append("name", name); fd.append("phrase", says); fd.append("audio", clip, "take.wav");
+      const cues = [...document.querySelectorAll('#cueBoxes input:checked')].map((i) => i.value);
+      const fd = new FormData();
+      fd.append("name", name); fd.append("phrase", says); fd.append("cues", JSON.stringify(cues)); fd.append("audio", clip, "take.wav");
       const r = await api("/api/enroll", { method: "POST", body: fd });
       enrollTakes = r.takes; drawTakes(); chime(true);
       $("sname").readOnly = true; $("done").hidden = false;
@@ -210,12 +299,12 @@
   // ---------- Controls ----------
   $("listen").addEventListener("click", listen);
   $("loop").addEventListener("change", (e) => { if (e.target.checked) listen(); });
-  $("repeat").addEventListener("click", () => { chime(true); speak(lastPhrase); });
+  $("repeat").addEventListener("click", () => { chime(true); speak(lastSaid); });
   $("mute").addEventListener("click", (e) => {
     muted = !muted; e.target.setAttribute("aria-pressed", muted); e.target.textContent = muted ? "Unmute voice" : "Mute voice";
   });
   document.addEventListener("keydown", (e) => {
-    if (e.code === "Space" && !e.repeat && !/INPUT|TEXTAREA|BUTTON/.test(document.activeElement.tagName)) { e.preventDefault(); listen(); }
+    if (e.code === "Space" && !e.repeat && !/INPUT|TEXTAREA|BUTTON|SUMMARY/.test(document.activeElement.tagName)) { e.preventDefault(); listen(); }
   });
 
   // ---------- Pixie dust ----------
@@ -226,7 +315,7 @@
   const star = () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 0.15, vy: -Math.random() * 0.25 - 0.05, r: Math.random() * 1.4 + 0.4, life: Math.random(), decay: 0.002, star: true });
   function burst() {
     if (reduce) return;
-    for (let i = 0; i < 70; i++) motes.push({ x: W / 2, y: H * 0.42, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4 - 1, r: Math.random() * 2 + 1, life: 1, decay: 0.012 + Math.random() * 0.01 });
+    for (let i = 0; i < 70; i++) motes.push({ x: W / 2, y: H * 0.3, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4 - 1, r: Math.random() * 2 + 1, life: 1, decay: 0.012 + Math.random() * 0.01 });
   }
   function frame() {
     g.clearRect(0, 0, W, H);
@@ -245,6 +334,7 @@
     if (!reduce) requestAnimationFrame(frame);
   }
   addEventListener("resize", size);
+  new ResizeObserver(size).observe(stage);
   size();
   for (let i = 0; i < 60; i++) motes.push(star());
   frame();
