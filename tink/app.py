@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import audio, bayes, llm
@@ -174,8 +174,9 @@ async def recognize(
     }
     top = ranked[0]
     matched = top["name"] != bayes.UNKNOWN and top["name"] in phrase
+    voiced = {n for n, s in store.sounds.items() if s.get("voice")}
     base = {"p": top["p"], "taught": phrase.get(top["name"]), "ranked": ranked, "scores": scores, "packet": packet,
-            "timing": {"heard_ms": heard_ms}}
+            "timing": {"heard_ms": heard_ms}, "voiced": sorted(voiced)}
 
     # The room itself: stay quiet and don't disturb an open question.
     if matched and store.role_of(top["name"]) == "background":
@@ -243,6 +244,26 @@ async def reply(text: str = Form(...), to: str = Form("English"), prof: Profile 
     said = await llm.translate(text, to)
     return {"say": said or text, "typed": text, "to": to, "source": "grok" if said else "typed",
             "packet": {"text": text, "to": to} if llm.KEY else None}
+
+
+@app.post("/api/voice")
+async def bank_voice(name: str = Form(...), audio_file: UploadFile = File(..., alias="audio"),
+                     prof: Profile = Depends(profile)):
+    """Message banking: store the person saying this sound's phrase in their own voice."""
+    wav = await _read(audio_file)
+    if audio.is_silent(wav):
+        raise HTTPException(400, "Tink didn't hear the phrase. Move closer to the mic and try again.")
+    if not prof.store.set_voice(name, wav):
+        raise HTTPException(404, f"No sound called {name!r}.")
+    return {"ok": True, "name": name}
+
+
+@app.get("/api/voice/{name:path}")
+async def play_voice(name: str, prof: Profile = Depends(profile)):
+    path = prof.store.voice_path(name)
+    if not path:
+        raise HTTPException(404, f"No banked voice for {name!r}.")
+    return FileResponse(path, media_type="audio/wav")
 
 
 @app.post("/api/confirm")

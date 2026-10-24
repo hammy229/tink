@@ -75,7 +75,7 @@ class Store:
     def all(self) -> list[dict]:
         return [
             {"name": n, "phrase": s["phrase"], "cues": s.get("cues", []), "role": s.get("role"),
-             "urgent": bool(s.get("urgent")), "takes": len(s["takes"])}
+             "urgent": bool(s.get("urgent")), "voice": bool(s.get("voice")), "takes": len(s["takes"])}
             for n, s in self.sounds.items()
         ]
 
@@ -117,6 +117,25 @@ class Store:
         self._save()
         self.calibrate()
         return len(s["takes"])
+
+    # Message banking: the person records the phrase in their own voice while they still can,
+    # and Tink plays that recording instead of a synthetic voice.
+    def set_voice(self, name: str, wav: np.ndarray) -> bool:
+        s = self.sounds.get(name)
+        if not s:
+            return False
+        s.setdefault("dir", f"{slug(name)[:40]}-{uuid.uuid4().hex[:6]}")
+        rel = f"{s['dir']}/voice.wav"
+        (self.root / "takes" / s["dir"]).mkdir(parents=True, exist_ok=True)
+        (self.root / "takes" / rel).write_bytes(audio.to_wav_bytes(wav))
+        s["voice"] = rel
+        self._save()
+        return True
+
+    def voice_path(self, name: str) -> Path | None:
+        rel = self.sounds.get(name, {}).get("voice")
+        path = self.root / "takes" / rel if rel else None
+        return path if path and path.exists() else None
 
     def confirm(self, name: str, hour: int) -> bool:
         if name not in self.sounds:

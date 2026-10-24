@@ -279,3 +279,21 @@ def test_public_mode_rejects_bad_links_and_big_uploads(public):
     r = c.post("/api/enroll", data={"name": "x", "phrase": "y"}, files={"audio": ("a.wav", big)}, headers={"X-Tink-Profile": pid})
     assert r.status_code == 413
     assert c.post("/api/profiles", data={"name": "  "}).status_code == 400
+
+
+def test_banked_voice_is_stored_served_and_forgotten(client):
+    c, app_module, root = client
+    for i in range(2):
+        enroll(c, "Hum", tone(140, seed=i), "I'm thirsty.")
+        enroll(c, "Hiss", hiss(seed=i), "I'm cold.")
+    assert c.post("/api/voice", data={"name": "Nope"}, files={"audio": ("v.wav", tone(300))}).status_code == 404
+    assert c.post("/api/voice", data={"name": "Hum"}, files={"audio": ("v.wav", tone(300, seconds=1.2))}).json()["ok"]
+    hum = next(s for s in c.get("/api/sounds").json()["sounds"] if s["name"] == "Hum")
+    assert hum["voice"] is True
+    r = c.get("/api/voice/Hum")
+    assert r.status_code == 200 and r.headers["content-type"] == "audio/wav" and len(r.content) > 1000
+    rec = c.post("/api/recognize", files={"audio": ("a.wav", tone(142, seed=7))}).json()
+    assert rec["name"] == "Hum" and "Hum" in rec["voiced"]
+    path = app_module.store.voice_path("Hum")
+    c.delete("/api/sounds/Hum")
+    assert not path.exists() and c.get("/api/voice/Hum").status_code == 404
