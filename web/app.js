@@ -200,15 +200,68 @@
   // ---------- Listen ----------
   const scrim = $("scrim");
   const setStage = (state, status, tint) => {
-    stage.className = `stage ${state}`; statusText.textContent = status;
+    stage.className = `stage ${state}`;
+    if (statusText.textContent !== status) {
+      statusText.textContent = status;
+      if (!still) statusText.animate([{ opacity: 0, transform: "translateY(3px)" }, { opacity: 1, transform: "none" }], { duration: 200, easing: EASE });
+    }
     if (tint) scrim.style.setProperty("--scrim", tint); else scrim.style.removeProperty("--scrim");
   };
   const clock = () => new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   const hideResult = () => { for (const id of ["ranked", "feedback", "taught"]) $(id).hidden = true; };
 
+  // ---------- Motion ----------
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const EASE = "cubic-bezier(.16, 1, .3, 1)";
+  // The focal moment: the phrase is cut into the paper. A blade sweeps left to right and the
+  // text lands like a paper cut-out settling onto the screen.
+  function castPhrase(text, delay = 0) {
+    phrase.textContent = text;
+    if (still || !text.trim()) return;
+    phrase.animate([
+      { clipPath: "inset(-12% 100% -12% 0)", transform: "translateY(5px)", filter: "drop-shadow(5px 7px 0 rgba(21,17,14,.28))" },
+      { clipPath: "inset(-12% 0 -12% 0)", transform: "translateY(0)", filter: "drop-shadow(0 0 0 rgba(21,17,14,0))" },
+    ], { duration: 640, delay, easing: EASE, fill: "backwards" });
+    // The blade is placed when the cut starts, after the ranking and the rest of the result have laid out.
+    setTimeout(() => requestAnimationFrame(() => {
+      const c = phrase.parentElement.getBoundingClientRect(), p = phrase.getBoundingClientRect();
+      const blade = document.createElement("span");
+      blade.className = "blade";
+      Object.assign(blade.style, { left: `${p.left - c.left}px`, top: `${p.top - c.top - 6}px`, height: `${p.height + 12}px` });
+      phrase.parentElement.append(blade);
+      blade.animate([
+        { transform: "translateX(0)", opacity: 1 },
+        { transform: `translateX(${p.width}px)`, opacity: 1, offset: 0.85 },
+        { transform: `translateX(${p.width}px)`, opacity: 0 },
+      ], { duration: 620, easing: EASE, fill: "forwards" }).onfinish = () => blade.remove();
+    }), delay);
+  }
+  // Continuity: the heard sound's swatch flies out of the list and blooms into the whole screen.
+  function flyTint(name) {
+    const sw = document.querySelector(`.sound[data-name="${CSS.escape(name)}"] .sw`);
+    if (still || !sw) return false;
+    const a = sw.getBoundingClientRect(), b = scrim.getBoundingClientRect();
+    if (!a.width) return false; // list hidden (present mode, phone scrolled away)
+    const f = document.createElement("div");
+    f.className = "flight";
+    f.style.setProperty("--t", tintOf(name));
+    Object.assign(f.style, { left: `${a.left}px`, top: `${a.top}px`, width: `${a.width}px`, height: `${a.height}px`, borderRadius: "5px", transformOrigin: "0 0" });
+    document.body.append(f);
+    const sx = b.width / a.width, sy = b.height / a.height;
+    const end = `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${sx}, ${sy})`;
+    // travel reads as a journey (ease in and out), then the colour pours into the screen and fades
+    f.animate([
+      { transform: "none", borderRadius: "5px", opacity: 1, easing: "cubic-bezier(.5, 0, .2, 1)" },
+      { transform: end, borderRadius: `${22 / sx}px / ${22 / sy}px`, opacity: 0.8, offset: 0.68 },
+      { transform: end, borderRadius: `${22 / sx}px / ${22 / sy}px`, opacity: 0 },
+    ], { duration: 720, easing: "linear" }).onfinish = () => f.remove();
+    return true;
+  }
+
   async function listen() {
     if (busy || enrolling || alarmOn || realSounds().length < minSounds) return;
     busy = true; $("listen").disabled = true; $("take").disabled = true;
+    $("listen").querySelector(".lbl").textContent = "Listening";
     setStage("listening", "Listening");
     phrase.textContent = " "; why.textContent = ""; hideResult();
     renderSounds();
@@ -232,6 +285,7 @@
       $("loop").checked = false;
     }
     await spoken;
+    $("listen").querySelector(".lbl").textContent = "Listen";
     busy = false; $("take").disabled = false; $("listen").disabled = alarmOn || realSounds().length < minSounds;
     if ($("loop").checked && !alarmOn) { await wait(lastAsk ? 1500 : 500); listen(); }
     else if (!stage.classList.contains("error") && !alarmOn) statusText.textContent = "Ready";
@@ -249,7 +303,7 @@
     const top = r.ranked[0];
     const heard = r.matched && !r.ask;
     setStage(heard ? "heard" : "missed", r.ask ? "Checking with you" : heard ? "Heard you" : "Not sure", heard ? tintOf(r.name) : null);
-    phrase.textContent = r.say;
+    castPhrase(r.say, heard && flyTint(r.name) ? 420 : 0);
     const cueText = r.packet.webcam_cues.length ? ` · saw ${r.packet.webcam_cues.map(cueLabel).join(", ")}` : "";
     const via = r.source === "grok" ? ` · worded by ${llmModel}` : "";
     const d = r.dialog || {};
@@ -262,8 +316,8 @@
       : `Nothing matched closely enough${cueText}`;
     $("hint").textContent = d.asking && !$("loop").checked ? "Press Listen (or space), then make the yes or no sound." : HINT;
 
-    $("ranked").innerHTML = r.ranked.slice(0, 3).map((x) => `
-      <li class="${x.name === "unknown" ? "unknown" : ""}${heard && x.name === r.name ? " lead" : ""}" style="--t:${tintOf(x.name)}">
+    $("ranked").innerHTML = r.ranked.slice(0, 3).map((x, i) => `
+      <li class="${x.name === "unknown" ? "unknown" : ""}${heard && x.name === r.name ? " lead" : ""}" style="--t:${tintOf(x.name)}; --i:${i}">
         <span class="sw" aria-hidden="true"></span>
         <span>${x.name === "unknown" ? "Didn't catch it" : esc(x.name)}</span>
         <span class="p"><b>${pct(x.p)}</b>${pct(x.p) !== pct(x.audio_p) ? ` · sound alone ${pct(x.audio_p)}` : ""}</span>
@@ -297,6 +351,7 @@
     try {
       await api("/api/confirm", { method: "POST", body: new URLSearchParams({ name: lastName }) });
       feedbackDone("Thanks. Tink will remember this time of day.");
+      document.querySelector(`.sound[data-name="${CSS.escape(lastName)}"]`)?.classList.add("learned");
     } catch (e) { feedbackDone(e.message); }
   });
   $("wrong").addEventListener("click", () => {
@@ -306,7 +361,7 @@
   });
   $("useTaught").addEventListener("click", () => {
     const text = $("taughtText").textContent;
-    phrase.textContent = text; lastSaid = text; lastLang = null; speak(text);
+    castPhrase(text); lastSaid = text; lastLang = null; speak(text);
     $("taught").hidden = true;
     why.insertAdjacentText("beforeend", " · switched to the taught phrase");
   });
@@ -314,20 +369,20 @@
   // Every turn stays in the log, stamped. A wrong guess is struck through, never removed.
   function addLog(text, stamp, name) {
     log.push({ t: clock(), text, stamp, name });
-    renderLog();
+    renderLog(true);
   }
-  function renderLog() {
-    $("log").innerHTML = log.slice(-12).reverse().map((e) => `
-      <li><time>${esc(e.t)}</time><span class="text${e.stamp === "Wrong" ? " struck" : ""}">${esc(e.text)}</span>
+  function renderLog(fresh = false) {
+    $("log").innerHTML = log.slice(-12).reverse().map((e, i) => `
+      <li${fresh && i === 0 ? ' class="fresh"' : ""}><time>${esc(e.t)}</time><span class="text${e.stamp === "Wrong" ? " struck" : ""}">${esc(e.text)}</span>
       <span class="stamp${e.stamp === "Wrong" ? " wrong" : e.stamp === "Urgent" || e.stamp === "Answered" ? " urgent" : e.stamp === "Replied" ? " replied" : ""}" style="--t:${e.name ? tintOf(e.name) : "var(--control-line)"}">${e.stamp}</span></li>`).join("");
     $("logEmpty").hidden = log.length > 0;
   }
 
   // ---------- Sounds list + first run ----------
-  const dots = (n) => Array.from({ length: 5 }, (_, i) => `<i class="${i < n ? "" : "off"}"></i>`).join("");
+  const dots = (n, fresh = false) => Array.from({ length: 5 }, (_, i) => `<i class="${i < n ? (fresh && i === n - 1 ? "new" : "") : "off"}"></i>`).join("");
   function renderSounds(lit) {
     $("sounds").innerHTML = sounds.map((s) => `
-      <li class="sound${s.name === lit ? " lit" : ""}" style="--t:${tintOf(s.name)}">
+      <li class="sound${s.name === lit ? " lit" : ""}" data-name="${esc(s.name)}" style="--t:${tintOf(s.name)}">
         <span class="sw" aria-hidden="true"></span>
         <span class="name">${esc(s.name)}</span>
         <span class="takes" aria-label="${s.takes} takes">${dots(s.takes)}</span>
@@ -382,7 +437,7 @@
       `<label><input type="checkbox" name="cue" value="${c}" id="cue-${c}"> ${cueLabel(c)}</label>`).join("");
   }
   let enrollTakes = 0;
-  const drawTakes = () => { $("enrollDots").innerHTML = enrollTakes ? dots(enrollTakes) + `<span class="help">&nbsp;${enrollTakes} of 5</span>` : ""; };
+  const drawTakes = (fresh = false) => { $("enrollDots").innerHTML = enrollTakes ? dots(enrollTakes, fresh) + `<span class="help">&nbsp;${enrollTakes} of 5</span>` : ""; };
   const takeLabel = (t) => { $("take").querySelector("span").textContent = t; };
   $("enroll").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -402,7 +457,7 @@
       fd.append("urgent", $("surgent").checked ? "true" : "false");
       fd.append("audio", clip, "take.wav");
       const r = await api("/api/enroll", { method: "POST", body: fd });
-      enrollTakes = r.takes; drawTakes(); chime(true);
+      enrollTakes = r.takes; drawTakes(true); chime(true);
       $("sname").readOnly = true; $("done").hidden = false;
       await refresh(name);
     } catch (err) {
@@ -436,7 +491,7 @@
       const r = await api("/api/reply", { method: "POST", body: new URLSearchParams({ text, to: personLang().name }) });
       hideResult(); $("guide").hidden = true;
       statusText.textContent = "To them";
-      phrase.textContent = r.say;
+      castPhrase(r.say);
       why.innerHTML = r.say !== r.typed
         ? `You typed: <b>${esc(r.typed)}</b> · translated into ${esc(r.to)} by ${esc(llmModel || "Grok")}`
         : personLang().name !== "English" && !llmModel ? "Said as typed. Translation needs an xAI key." : "From you";
@@ -459,6 +514,7 @@
     if (busy || enrolling) { $("roomErr").textContent = "Turn off Keep listening first, then record."; return; }
     const b = $("roomTake"), label = b.querySelector("span");
     enrolling = true; b.disabled = true; $("roomErr").textContent = ""; label.textContent = "Recording the room, stay quiet";
+    b.classList.add("filling");
     try {
       const clip = await recordClip({ fixedMs: 3000 });
       const fd = new FormData();
@@ -467,7 +523,7 @@
       await api("/api/enroll", { method: "POST", body: fd });
       await refresh();
     } catch (err) { $("roomErr").textContent = micError(err); }
-    enrolling = false; b.disabled = false; label.textContent = "Record 3 more seconds";
+    enrolling = false; b.disabled = false; b.classList.remove("filling"); label.textContent = "Record 3 more seconds";
     $("listen").disabled = realSounds().length < minSounds;
   });
 
@@ -491,7 +547,7 @@
     alarmOn = true; lastName = r.name; lastAsk = false;
     document.body.classList.add("alarm");
     setStage("heard", "Urgent", "var(--alarm)");
-    phrase.textContent = r.say;
+    castPhrase(r.say);
     why.innerHTML = `Heard <b>${esc(r.name.toLowerCase())}</b>, marked urgent · <span class="conf">${pct(r.p)}</span> sure`;
     hideResult(); $("guide").hidden = true; $("alarmBox").hidden = false; $("listen").disabled = true;
     lastSaid = r.say; lastLang = null; $("repeat").disabled = false;
@@ -521,6 +577,12 @@
     if (muted) try { speechSynthesis.cancel(); } catch {}
   });
   function togglePresent(on = !document.body.classList.contains("present")) {
+    if (!still && document.startViewTransition && !togglePresent.busy) {
+      togglePresent.busy = true;
+      document.startViewTransition(() => applyPresent(on)).finished.finally(() => { togglePresent.busy = false; });
+    } else applyPresent(on);
+  }
+  function applyPresent(on) {
     document.body.classList.toggle("present", on);
     $("present").setAttribute("aria-pressed", on);
     $("present").querySelector("i").className = on ? "ph ph-corners-in" : "ph ph-corners-out";

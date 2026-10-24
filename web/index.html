@@ -32,6 +32,12 @@
     <section class="stage idle" id="stage" aria-label="Tink">
       <div class="scrim" id="scrim">
       <canvas id="dust" aria-hidden="true"></canvas>
+      <svg class="skyline farther" viewBox="0 0 2400 120" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+        <path transform="translate(1200 0) scale(-1 1)" d="M0 120V92h40V80h30v15h40V70h8v-8h6v8h26v18h50V76h30V66h6v10h24v14h50V72h30V60l15-10 15 10v12h30v22h50V84h50V70h6V60h6v10h28v16h50v-8h50v14h50V74h30V64h6v10h34v14h40v-8h40V60h18V30l10-8 12-16 12 16 10 8v30h18v22h40V70h30V58l20-14 20 14v12h30v20h40V78h30V68h6v10h24v14h40v28Z"/><path transform="translate(2400 0) scale(-1 1)" d="M0 120V92h40V80h30v15h40V70h8v-8h6v8h26v18h50V76h30V66h6v10h24v14h50V72h30V60l15-10 15 10v12h30v22h50V84h50V70h6V60h6v10h28v16h50v-8h50v14h50V74h30V64h6v10h34v14h40v-8h40V60h18V30l10-8 12-16 12 16 10 8v30h18v22h40V70h30V58l20-14 20 14v12h30v20h40V78h30V68h6v10h24v14h40v28Z"/>
+      </svg>
+      <svg class="skyline far" viewBox="0 0 2400 120" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+        <path d="M0 120V92h40V80h30v15h40V70h8v-8h6v8h26v18h50V76h30V66h6v10h24v14h50V72h30V60l15-10 15 10v12h30v22h50V84h50V70h6V60h6v10h28v16h50v-8h50v14h50V74h30V64h6v10h34v14h40v-8h40V60h18V30l10-8 12-16 12 16 10 8v30h18v22h40V70h30V58l20-14 20 14v12h30v20h40V78h30V68h6v10h24v14h40v28Z"/><path transform="translate(1200 0)" d="M0 120V92h40V80h30v15h40V70h8v-8h6v8h26v18h50V76h30V66h6v10h24v14h50V72h30V60l15-10 15 10v12h30v22h50V84h50V70h6V60h6v10h28v16h50v-8h50v14h50V74h30V64h6v10h34v14h40v-8h40V60h18V30l10-8 12-16 12 16 10 8v30h18v22h40V70h30V58l20-14 20 14v12h30v20h40V78h30V68h6v10h24v14h40v28Z"/>
+      </svg>
       <svg class="skyline" viewBox="0 0 1200 120" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
         <path fill-rule="evenodd" d="M0 120V92h40V80h30v15h40V70h8v-8h6v8h26v18h50V76h30V66h6v10h24v14h50V72h30V60l15-10 15 10v12h30v22h50V84h50V70h6V60h6v10h28v16h50v-8h50v14h50V74h30V64h6v10h34v14h40v-8h40V60h18V30l10-8 12-16 12 16 10 8v30h18v22h40V70h30V58l20-14 20 14v12h30v20h40V78h30V68h6v10h24v14h40v28Z M872 42a8 8 0 1 0 16 0a8 8 0 1 0-16 0Z"/>
       </svg>
@@ -73,7 +79,7 @@
 
       <div class="pad">
         <div class="actions">
-          <button class="btn listen" id="listen" disabled><i class="ph-fill ph-microphone" aria-hidden="true"></i><span>Listen</span></button>
+          <button class="btn listen" id="listen" disabled><span class="lvl" aria-hidden="true"></span><i class="ph-fill ph-microphone" aria-hidden="true"></i><span class="lbl">Listen</span></button>
           <button class="btn quiet" id="repeat" disabled><i class="ph ph-speaker-high" aria-hidden="true"></i>Say it again</button>
           <button class="btn quiet" id="mute" aria-pressed="false"><i class="ph ph-speaker-slash" aria-hidden="true"></i><span>Mute voice</span></button>
         </div>

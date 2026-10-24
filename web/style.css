@@ -69,6 +69,10 @@ body.speaking .top, body.speaking .side, body.speaking .lower, body.speaking .pa
 .icon-btn span { font-size: 15px; }
 .btn.listen { min-height: 64px; padding: 14px 38px; font-size: 20px; position: relative; }
 .btn.listen .ph-fill { font-size: 24px; }
+.btn.listen .lvl { position: absolute; inset: 0; border-radius: inherit; background: var(--ink); opacity: .16; transform-origin: left; transform: scaleX(0); pointer-events: none; }
+.listening .btn.listen .lvl { transform: scaleX(calc(.08 + .92 * var(--lvl))); transition: transform .08s linear; }
+.btn.listen { overflow: visible; isolation: isolate; }
+.listening .btn.listen:disabled { opacity: 1; cursor: default; } /* busy listening, not unavailable */
 .listening .btn.listen::after { content: ""; position: absolute; inset: -6px; border-radius: inherit; border: 2px solid var(--light); opacity: .6; animation: ring 1.4s var(--ease) infinite; }
 @keyframes ring { from { transform: scale(.96); opacity: .7; } to { transform: scale(1.12); opacity: 0; } }
 
@@ -92,6 +96,12 @@ body.speaking .top, body.speaking .side, body.speaking .lower, body.speaking .pa
 }
 #dust { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; }
 .skyline { position: absolute; left: 0; right: 0; bottom: -1px; width: 100%; height: 88px; fill: var(--ink); pointer-events: none; }
+/* two far rows of the city drift behind the near one, slower the farther they are */
+.skyline.far { width: 200%; right: auto; height: 62px; bottom: 30px; opacity: .1; animation: drift 140s linear infinite; }
+.skyline.farther { width: 200%; right: auto; height: 50px; bottom: 52px; opacity: .055; animation: drift 220s linear infinite reverse; }
+@keyframes drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+body.present .skyline.far { height: 92px; bottom: 44px; }
+body.present .skyline.farther { height: 74px; bottom: 76px; }
 .scrim > :not(canvas):not(.skyline) { position: relative; }
 
 .idle .scrim { --scrim: var(--paper-dim); }
@@ -113,8 +123,9 @@ body.speaking .top, body.speaking .side, body.speaking .lower, body.speaking .pa
 
 .center { display: grid; justify-items: center; text-align: center; gap: 16px; align-content: center; padding-block: 6px; }
 .phrase { font-family: var(--display); font-weight: 400; font-size: clamp(40px, 5.2vw, 68px); line-height: 1.06; letter-spacing: -.012em; max-width: 17ch; text-wrap: balance; min-height: 1.06em; color: var(--ink); }
-.heard .phrase { animation: cast .55s var(--ease); }
-@keyframes cast { from { opacity: 0; filter: blur(6px); transform: scale(1.04); } to { opacity: 1; filter: blur(0); transform: none; } }
+/* the paper-cut reveal is driven from app.js (castPhrase); the blade is its cutting edge */
+.center { position: relative; }
+.blade { position: absolute; top: 0; width: 3px; border-radius: 2px; background: var(--ink); pointer-events: none; }
 .why { font-size: 16.5px; min-height: 1.5em; max-width: 54ch; color: var(--ink); opacity: .82; }
 .why b { opacity: 1; }
 .conf { font-family: var(--mono); font-variant-numeric: tabular-nums; }
@@ -133,6 +144,9 @@ body.speaking .top, body.speaking .side, body.speaking .lower, body.speaking .pa
 .taught { display: flex; gap: 6px 12px; align-items: center; flex-wrap: wrap; justify-content: center; font-size: 15px; }
 .linkish { border: 0; background: none; color: var(--ink); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; min-height: 36px; padding: 4px 6px; border-radius: 8px; }
 .ranked { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; width: min(460px, 100%); text-align: left; }
+.ranked li { animation: row-in .42s var(--ease) both; animation-delay: calc(var(--i, 0) * 70ms); }
+.ranked li .bar { animation-delay: calc(120ms + var(--i, 0) * 70ms); animation-fill-mode: both; }
+@keyframes row-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .ranked li { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; font-size: 15.5px; align-items: center; }
 .ranked .sw { width: 14px; height: 14px; border-radius: 4px; background: var(--t); border: 2px solid var(--ink); }
 .ranked li.lead .sw, .ranked li.lead .bar { background: var(--ink); }
@@ -166,6 +180,14 @@ body.present .btn.ack { min-height: 88px; font-size: 28px; }
 .cam .cue { border-color: rgba(21, 17, 14, .45); color: var(--ink); }
 .cam .cue.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
+/* the heard sound's swatch flies from the list and blooms into the screen */
+.flight { position: fixed; z-index: 30; pointer-events: none; background: var(--t); }
+
+/* present mode morphs through a view transition */
+.scrim { view-transition-name: scrim; }
+.brand h1 { view-transition-name: wordmark; }
+::view-transition-group(scrim) { animation-duration: .5s; animation-timing-function: cubic-bezier(.16, 1, .3, 1); }
+
 /* ---------- side panels ---------- */
 .side { display: grid; gap: 22px; align-content: start; min-width: 0; }
 .panel { background: transparent; border: 1px solid var(--line); border-radius: var(--r); padding: 22px; display: grid; gap: 14px; min-width: 0; }
@@ -181,6 +203,8 @@ body.present .btn.ack { min-height: 88px; font-size: 28px; }
 .sound { display: grid; grid-template-columns: auto 1fr auto auto; gap: 2px 12px; padding: 12px 6px; align-items: center; border-top: 1px solid var(--line); transition: background .3s; border-radius: 10px; }
 .sound:first-child { border-top: 0; }
 .sound .sw { width: 18px; height: 18px; border-radius: 5px; background: var(--t); }
+.sound.learned .sw { animation: learned .6s var(--ease); }
+@keyframes learned { 40% { transform: scale(1.6); } }
 .sound.lit { background: color-mix(in srgb, var(--t) 16%, transparent); }
 .sound .name { font-weight: 700; }
 .sound .says, .sound .cuelist { grid-column: 2 / -1; }
@@ -210,6 +234,12 @@ form { display: grid; gap: 14px; }
 .cue-boxes input { width: 18px; height: 18px; margin: 0; }
 .enroll-takes { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .enroll-takes .takes i { width: 14px; height: 14px; }
+.takes i.new { animation: pop .4s cubic-bezier(.2, 1.5, .4, 1) both; }
+@keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+#roomTake { position: relative; overflow: hidden; isolation: isolate; }
+#roomTake::after { content: ""; position: absolute; inset: 0; z-index: -1; background: color-mix(in srgb, var(--light) 28%, transparent); transform-origin: left; transform: scaleX(0); }
+#roomTake.filling::after { animation: fill 3s linear forwards; }
+@keyframes fill { to { transform: scaleX(1); } }
 .recording #take { background: var(--miss); }
 .urgent-pick { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--control-line); border-radius: 12px; cursor: pointer; }
 .urgent-pick:has(input:checked) { border-color: var(--alarm); background: color-mix(in srgb, var(--alarm) 12%, transparent); }
@@ -241,6 +271,9 @@ body.present .reply-panel { display: none; }
 .log .text { min-width: 0; }
 .log .text.struck { text-decoration: line-through; text-decoration-thickness: 2px; color: var(--muted); }
 .stamp { font-size: 12.5px; font-weight: 700; letter-spacing: .04em; padding: 2px 9px; border-radius: 6px; border: 1.5px solid var(--t, var(--control-line)); color: var(--fg); transform: rotate(-2deg); white-space: nowrap; }
+.log li.fresh { animation: row-in .35s var(--ease) both; }
+.log li.fresh .stamp { animation: thunk .34s cubic-bezier(.2, 1.4, .4, 1) .12s both; }
+@keyframes thunk { 0% { opacity: 0; transform: scale(1.9) rotate(-14deg); } 70% { opacity: 1; transform: scale(.94) rotate(-1deg); } 100% { opacity: 1; transform: scale(1) rotate(-2deg); } }
 .stamp.wrong { border-color: var(--miss); color: var(--miss); }
 .stamp.urgent { border-color: var(--alarm); background: var(--alarm); color: var(--ink); }
 .packet { color: var(--muted); font-size: 14.5px; }
@@ -275,4 +308,5 @@ body.present .guide b { font-size: 20px; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
+  .listening .btn.listen .lvl { transform: scaleX(calc(.08 + .92 * var(--lvl))); } /* the level itself is information */
 }
