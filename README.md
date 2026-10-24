@@ -21,12 +21,29 @@ Open http://localhost:8000 in Chrome. Allow the microphone.
 2. Teach at least 2 sounds.
 3. Press **Listen** (or space), make a sound, and Tink says the phrase.
 
+To let Grok word what Tink says, set a key first (optional; without it Tink says the taught phrase):
+
+```bash
+export XAI_API_KEY=...
+export TINK_GROK_MODEL=grok-4.3   # list yours: curl https://api.x.ai/v1/models -H "Authorization: Bearer $XAI_API_KEY"
+```
+
 ## How it works
 
-1. The browser records a clip and stops on its own when the sound ends, then sends a WAV.
-2. The backend resamples to 16 kHz mono and trims the silence.
-3. voc2vec turns the clip into one vector (mean of one hidden layer over time). The released checkpoints have no classifier head, so there is no training.
-4. Each sound's vector is the average of its takes. A new clip matches the closest one by cosine similarity, after subtracting the mean of all takes. Below `TINK_THRESHOLD` it says "I didn't catch that."
+```
+mic clip ──► voc2vec scores ──┐
+                              ├─► Bayesian posterior ──► JSON packet ──► Grok ──► spoken sentence
+webcam ──► face cues ─────────┘   (time-of-day prior)
+```
+
+1. **Audio.** The browser records a clip, stops on its own when the sound ends, and sends a WAV. The backend resamples to 16 kHz mono and trims the silence.
+2. **voc2vec.** Turns the clip into one vector (mean of one hidden layer over time). The released checkpoints have no classifier head, so there is no training. Each sound's vector is the average of its takes, and the clip is scored against each by cosine similarity after subtracting the mean of all takes.
+3. **Bayes** (`tink/bayes.py`). `P(sound | clip, cues, time) ∝ P(clip | sound) · P(cues | sound) · P(sound | time)`.
+   - Audio likelihood: softmax of the scores. An "unknown" option sits at `TINK_THRESHOLD`, so weak matches become "I didn't catch that."
+   - Time prior: Dirichlet-smoothed counts of confirmed uses per part of day. It learns every time someone presses **Right**.
+   - Face cues: a sound taught with "smile" gets a boost when the camera sees a smile.
+4. **Webcam** (`web/cues.js`). MediaPipe Face Landmarker runs in the browser and reports nod, shake, smile, frown, or eyes closed. Only those words leave the browser, never video.
+5. **JSON packet → Grok** (`tink/llm.py`). The top candidates with probabilities, the time, recent phrases, and cue names. Grok words one short sentence, or asks an either/or question when the top two are close. If Grok fails or there is no key, Tink says the taught phrase. The UI shows the exact packet and offers "Say the taught phrase" whenever Grok rewords it.
 
 ## Risk test
 
@@ -46,15 +63,19 @@ It prints leave-one-out accuracy for every layer and a suggested threshold. Go i
 | `TINK_MODEL` | `alkiskoudounas/voc2vec-hubert-ls-pt` | Any voc2vec checkpoint |
 | `TINK_LAYER` | `-1` | Hidden layer to pool (0 to 12) |
 | `TINK_THRESHOLD` | `0.5` | Minimum centered cosine to count as a match |
-| `TINK_DATA` | `data` | Where takes and `sounds.json` live |
+| `TINK_DATA` | `data` | Where takes, `sounds.json`, and `usage.json` live |
+| `TINK_TEMP` | `0.1` | Softmax temperature on audio scores (lower = more confident) |
+| `XAI_API_KEY` | unset | Turns on Grok wording |
+| `TINK_GROK_MODEL` | `grok-4.3` | xAI model id |
 
 ## API
 
 | Method | Path | Body | Returns |
 |---|---|---|---|
-| GET | `/api/sounds` | | `{sounds: [{name, phrase, takes}], threshold}` |
-| POST | `/api/enroll` | form: `name`, `phrase`, `audio` (WAV) | `{name, takes}` |
-| POST | `/api/recognize` | form: `audio` (WAV) | `{matched, name, phrase, score, scores}` |
+| GET | `/api/sounds` | | `{sounds: [{name, phrase, cues, takes}], threshold, cues, llm}` |
+| POST | `/api/enroll` | form: `name`, `phrase`, `cues` (JSON list), `audio` (WAV) | `{name, takes}` |
+| POST | `/api/recognize` | form: `audio` (WAV), `cues` (JSON list) | `{matched, name, p, say, ask, source, ranked, scores, packet}` |
+| POST | `/api/confirm` | form: `name` | `{ok, usage}` |
 | DELETE | `/api/sounds/{name}` | | `{ok}` |
 
 ## Layout
@@ -62,8 +83,10 @@ It prints leave-one-out accuracy for every layer and a suggested threshold. Go i
 ```
 tink/audio.py    load, resample, trim
 tink/embed.py    voc2vec embeddings
-tink/store.py    enrolled sounds + matching
+tink/store.py    enrolled sounds + scoring
+tink/bayes.py    posterior over sounds (audio, time of day, face cues)
+tink/llm.py      Grok wording with fallback
 tink/app.py      FastAPI routes, serves web/
-web/             frontend (plain HTML/CSS/JS, no build step)
+web/             frontend (plain HTML/CSS/JS, no build step); cues.js = MediaPipe face cues
 risk_test.py     layer sweep + threshold
 ```
