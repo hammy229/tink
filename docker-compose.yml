@@ -1,0 +1,36 @@
+# Single-VM deployment: Tink behind Caddy (automatic HTTPS).
+# HTTPS is REQUIRED: browsers only allow microphone access on secure origins.
+# Before a real domain exists, set TINK_DOMAIN to <server-ip>.sslip.io
+# (for example 203.0.113.7.sslip.io) and Caddy will still get a certificate.
+services:
+  tink:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false   # XAI_API_KEY is optional
+    environment:
+      TINK_PUBLIC: "1"
+      TINK_DATA: /data
+    volumes:
+      - tink-data:/data
+
+  caddy:
+    image: caddy:2.10
+    restart: unless-stopped
+    depends_on:
+      - tink
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      TINK_DOMAIN: ${TINK_DOMAIN:?set TINK_DOMAIN in .env}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  tink-data:
+  caddy-data:
+  caddy-config:

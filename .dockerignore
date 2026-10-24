@@ -1,0 +1,14 @@
+.venv
+data/
+.git
+.impeccable/review
+__pycache__
+**/__pycache__
+.pytest_cache
+.ruff_cache
+.mypy_cache
+tests
+docs
+deploy
+*.wav
+.env

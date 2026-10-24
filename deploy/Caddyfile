@@ -1,0 +1,6 @@
+# HTTPS is required for microphone access. Caddy gets certificates automatically.
+# TINK_DOMAIN can be <server-ip>.sslip.io until a real domain exists.
+{$TINK_DOMAIN} {
+	encode gzip
+	reverse_proxy tink:8000
+}
