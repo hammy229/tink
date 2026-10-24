@@ -18,7 +18,7 @@ Tink learns the specific sounds one person makes and says out loud what each one
 
 A caregiver teaches it a sound: type what it sounds like ("low hum") and what it means ("I'm thirsty", in any language), then record the person making it about five times. After two sounds, Tink is ready. When the person makes a sound, Tink chimes, shows the phrase in large type, and speaks it.
 
-If it isn't sure, it doesn't pretend to be. Below a threshold it says "I didn't catch that." When two meanings are close, it asks: "Do you want water, or do you want to rest?"
+If it isn't sure, it doesn't pretend to be. Below a threshold it says "I didn't catch that." When two meanings are close, it asks. If the person has taught Tink a "yes" sound and a "no" sound, Tink asks about one meaning at a time ("Do you mean 'I'm thirsty'?"), and the person answers with their own sounds. A misunderstanding gets fixed in two sounds instead of a guessing game.
 
 Tink can speak in a different language from the one the phrase was taught in, so a sound taught as "Tengo sed" can come out as "I'm thirsty."
 
@@ -60,7 +60,7 @@ Test it with people who actually communicate this way, and their speech therapis
 
 Run it on a phone or a small device worn on a lanyard, so it goes where the person goes.
 
-Let the person answer Tink's questions with their own yes and no sounds, so a misunderstanding gets fixed in two sounds instead of a guessing game.
+Let caregivers answer back: type a reply, and Tink says it to the person in their own language.
 
 ## Built with
 
