@@ -92,6 +92,11 @@
     <div class="top-controls">
       <label class="select" for="speakIn"><i class="ph ph-translate" aria-hidden="true"></i><span>Speak in</span><select id="speakIn" aria-label="Tink speaks in"></select></label>
       <span class="mode" id="mode">voc2vec</span>
+      <div class="profile-chip" id="profileChip" hidden>
+        <i class="ph ph-user-circle" aria-hidden="true"></i><span id="profileName"></span>
+        <button class="btn quiet small" id="copyLink" title="Anyone with this link can use this person's sounds"><i class="ph ph-link" aria-hidden="true"></i><span>Copy private link</span></button>
+        <button class="btn quiet small" id="newProfile"><i class="ph ph-user-plus" aria-hidden="true"></i><span>New person</span></button>
+      </div>
       <button class="btn quiet icon-btn" id="present" aria-pressed="false" title="Present mode (P)"><i class="ph ph-corners-out" aria-hidden="true"></i><span>Present</span></button>
     </div>
   </header>
@@ -119,6 +124,16 @@
         </div>
       </div>
 
+      <form class="onboard" id="onboard" hidden novalidate>
+        <h2>Who is Tink for?</h2>
+        <p>Tink learns one person's sounds. Give them a profile, and you get a private link back to it.</p>
+        <div class="onboard-row">
+          <label class="sr" for="onboardName">Their first name</label>
+          <input id="onboardName" autocomplete="off" maxlength="80" placeholder="Their first name">
+          <button type="submit" class="btn" id="onboardGo"><i class="ph-fill ph-sparkle" aria-hidden="true"></i><span>Start</span></button>
+        </div>
+        <p class="err" id="onboardErr" role="alert"></p>
+      </form>
       <div class="center" aria-live="polite">
         <div class="phrase" id="phrase">Teach Tink two sounds.</div><div class="why" id="why"></div>
         <ol class="guide" id="guide"><li><b>Teach two sounds</b><span id="guideCount">0 of 2 taught</span></li><li><b>Press Listen</b><span>and make one of them</span></li><li><b>Tink says it</b><span>in the language you pick</span></li></ol>

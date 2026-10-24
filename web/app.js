@@ -26,11 +26,24 @@
   const tintOf = (name) => { const i = realSounds().findIndex((x) => x.name === name); return i < 0 ? "var(--ash)" : `var(--t${i % 6})`; };
 
   // ---------- API ----------
+  // ---------- Profile ----------
+  // On a hosted Tink each person has a profile; its id is a private link (?p=...). Locally there is none.
+  let profileId = new URLSearchParams(location.search).get("p");
+  try { profileId = profileId || localStorage.getItem("tink.profile"); } catch {}
+  let isPublic = false;
+  const NO_PROFILE = /Create a profile first|No profile with that link|profile link is not valid/;
+  function useProfile(id) {
+    profileId = id;
+    try { localStorage.setItem("tink.profile", id); } catch {}
+    const u = new URL(location.href); u.searchParams.set("p", id); history.replaceState(null, "", u);
+  }
+
   async function api(path, opts = {}, ms = 25000) {
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), ms);
     try {
-      const r = await fetch(path, { ...opts, signal: ctl.signal });
+      const headers = { ...(opts.headers || {}), ...(profileId ? { "X-Tink-Profile": profileId } : {}) };
+      const r = await fetch(path, { ...opts, headers, signal: ctl.signal });
       const body = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(body.detail || `Server error ${r.status}`);
       return body;
@@ -45,9 +58,14 @@
     sounds = r.sounds; threshold = r.threshold; minSounds = r.min_sounds || 2;
     if (!allCues.length) { allCues = r.cues; renderCueBoxes(); }
     llmModel = r.llm.on ? r.llm.model : null;
+    isPublic = Boolean(r.profile?.public);
+    $("profileChip").hidden = !isPublic;
+    if (isPublic) $("profileName").textContent = r.profile.name;
     renderSelfTest(r.calibration || {});
     $("mode").textContent = llmModel ? `voc2vec + ${llmModel}` : "voc2vec";
-    $("leavesNote").textContent = llmModel
+    $("leavesNote").textContent = isPublic
+      ? `Recordings go only to this Tink server, kept under your private link. Video never leaves your browser.${llmModel ? ` Only the text below goes to ${llmModel}.` : ""}`
+      : llmModel
       ? `Audio and video never leave this laptop. Only the text below goes to ${llmModel}.`
       : "Nothing leaves this laptop. Add an xAI key and Grok will word and translate what Tink says.";
     renderSounds(lit);
@@ -642,9 +660,48 @@
   size();
   frame();
 
-  refresh().catch((e) => {
-    setStage("error", "Offline");
-    phrase.textContent = "Tink can't reach its server.";
-    why.textContent = e.message;
+  // ---------- Start ----------
+  function showOnboarding(msg = "") {
+    stage.classList.add("onboarding"); $("onboard").hidden = false; $("onboardErr").textContent = msg;
+    $("onboardName").focus();
+  }
+  $("onboard").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = $("onboardName").value.trim();
+    if (!name) { $("onboardErr").textContent = "Type their first name to start."; return; }
+    try {
+      profileId = null;
+      const r = await api("/api/profiles", { method: "POST", body: new URLSearchParams({ name }) });
+      useProfile(r.id);
+      stage.classList.remove("onboarding"); $("onboard").hidden = true;
+      await refresh();
+    } catch (err) { $("onboardErr").textContent = err.message; }
   });
+  $("newProfile").addEventListener("click", () => { $("onboard").reset(); showOnboarding(); });
+  $("copyLink").addEventListener("click", async () => {
+    const link = `${location.origin}${location.pathname}?p=${encodeURIComponent(profileId)}`;
+    const label = $("copyLink").querySelector("span");
+    try { await navigator.clipboard.writeText(link); label.textContent = "Link copied"; }
+    catch { prompt("Copy this private link:", link); }
+    setTimeout(() => { label.textContent = "Copy private link"; }, 2000);
+  });
+
+  (async function start() {
+    try {
+      await refresh();
+      if (profileId && isPublic) useProfile(profileId);
+    } catch (e) {
+      if (!NO_PROFILE.test(e.message)) {
+        setStage("error", "Offline");
+        phrase.textContent = "Tink can't reach its server.";
+        why.textContent = e.message;
+        return;
+      }
+      // A dead or stale link: forget it, then try without one (a local Tink needs none).
+      const hadLink = Boolean(profileId);
+      profileId = null;
+      try { localStorage.removeItem("tink.profile"); } catch {}
+      try { await refresh(); } catch { showOnboarding(hadLink ? "That link is not valid anymore. Start a new profile." : ""); }
+    }
+  })();
 })();
