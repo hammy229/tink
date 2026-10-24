@@ -1,5 +1,30 @@
 # Deploying Tink
 
+## Free options first
+
+**1. Hugging Face Space (free, always-on link, recommended for Devpost).** 2 vCPU and 16 GB RAM with HTTPS, built from our Dockerfile.
+
+```bash
+uvx --from huggingface_hub hf auth login     # once; paste a "Write" token from huggingface.co/settings/tokens
+XAI_API_KEY=... uv run python deploy/hf_space.py   # key optional; becomes a Space secret
+```
+
+It prints the Space page (build logs) and the app URL, `https://<user>-tink.hf.space`. The first build takes about 10 minutes. Recordings reset when the Space restarts, and it sleeps after about 48 hours without visitors, waking on the next visit.
+
+**2. Cloudflare quick tunnel (free, no account, runs from your laptop).** Good as a judging-day backup.
+
+```bash
+TINK_DATA=data/public-demo TINK_PUBLIC=1 uv run uvicorn tink.app:app --port 8768   # a separate public copy
+cloudflared tunnel --url http://localhost:8768                                    # prints https://....trycloudflare.com
+```
+
+Point the tunnel at the public copy, never at your own local Tink: anyone with the link can use whatever it serves. The link dies when the laptop sleeps or the command stops.
+
+## Paid option: your own VM
+
+The rest of this guide sets up a VM (Vultr or similar) with Caddy and a real domain. It costs money; use it only if you have credits.
+
+
 Tink needs HTTPS. Browsers block the microphone on plain HTTP.
 
 ## A. Vultr VM (Docker + Caddy)

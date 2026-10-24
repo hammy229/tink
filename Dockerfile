@@ -26,7 +26,7 @@ VOLUME /data
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
-    CMD python -c "import os,urllib.request as u; u.urlopen('http://127.0.0.1:%s/api/sounds' % os.environ.get('PORT','8000'), timeout=4)"
+    CMD python -c "import os,urllib.request as u; u.urlopen('http://127.0.0.1:%s/' % os.environ.get('PORT','8000'), timeout=4)"
 
 # Single worker: the app keeps per-process state.
 CMD ["sh", "-c", "exec uvicorn tink.app:app --host 0.0.0.0 --port ${PORT} --workers 1"]
