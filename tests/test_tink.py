@@ -158,3 +158,37 @@ def test_only_one_sound_holds_each_role(client):
     c.post("/api/enroll", data={"name": "Ah", "phrase": "Yes", "role": "yes"}, files={"audio": ("a.wav", tone(700))})
     c.post("/api/enroll", data={"name": "Oh", "phrase": "Yes", "role": "yes"}, files={"audio": ("a.wav", tone(900))})
     assert app_module.store.role_of("Ah") is None and app_module.store.role_of("Oh") == "yes"
+
+
+def test_room_noise_keeps_tink_quiet(client):
+    c, _, _ = client
+    for i in range(3):
+        enroll(c, "Hum", tone(140, seed=i), "I'm thirsty.")
+        enroll(c, "Hiss", hiss(seed=i), "I'm cold.")
+        c.post("/api/enroll", data={"name": "Room noise", "phrase": "(room noise)", "role": "background"},
+               files={"audio": ("a.wav", tone(3000, seed=i))})
+    r = c.post("/api/recognize", files={"audio": ("a.wav", tone(3000, seed=9))}).json()
+    assert r["background"] is True and r["say"] == "" and r["matched"] is False
+
+
+def test_quiet_room_is_a_valid_background_take(client):
+    c, _, _ = client
+    silent = io.BytesIO()
+    sf.write(silent, np.zeros(16_000, np.float32), 16_000, format="WAV")
+    r = c.post("/api/enroll", data={"name": "Room noise", "phrase": "(room noise)", "role": "background"},
+               files={"audio": ("a.wav", silent.getvalue())})
+    assert r.status_code == 200
+
+
+def test_urgent_sound_alerts_and_skips_the_question(client, monkeypatch):
+    c, app_module, _ = client
+    monkeypatch.setattr(app_module, "ASK_BELOW", 1.01)  # an ordinary match would become a question
+    for i in range(3):
+        enroll(c, "Hum", tone(140, seed=i), "I'm thirsty.")
+        c.post("/api/enroll", data={"name": "Scream", "phrase": "Help, it hurts!", "urgent": "true"},
+               files={"audio": ("a.wav", hiss(seed=i))})
+        c.post("/api/enroll", data={"name": "Ah", "phrase": "Yes", "role": "yes"}, files={"audio": ("a.wav", tone(700, seed=i))})
+        c.post("/api/enroll", data={"name": "Mm", "phrase": "No", "role": "no"}, files={"audio": ("a.wav", tone(1800, seed=i))})
+    r = c.post("/api/recognize", files={"audio": ("a.wav", hiss(seed=9))}).json()
+    assert r["urgent"] is True and r["ask"] is False and r["say"] == "Help, it hurts!" and r["source"] == "urgent"
+    assert any(s["urgent"] for s in c.get("/api/sounds").json()["sounds"])

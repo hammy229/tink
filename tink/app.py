@@ -23,6 +23,7 @@ recent: deque[dict] = deque(maxlen=5)  # what Tink said lately, for the LLM's co
 ASK_BELOW = 0.6  # top probability under this means Tink asks instead of saying
 DIALOG_SECONDS = 45  # how long a yes/no question stays open
 ANSWER_MIN = 0.6  # a yes or no sound must be at least this sure to answer a question
+URGENT_MIN = 0.4  # urgent sounds alert at lower confidence: a missed alarm costs more than a false one
 # When Tink is unsure and the person has a yes sound and a no sound, Tink asks about one meaning
 # at a time: {"options": [sound names, best first], "i": index being asked about, "at": datetime}.
 pending: dict | None = None
@@ -70,6 +71,7 @@ async def enroll(
     phrase: str = Form(...),
     cues: str = Form("[]"),
     role: str = Form(""),
+    urgent: bool = Form(False),
     audio_file: UploadFile = File(..., alias="audio"),
 ):
     name, phrase = name.strip(), phrase.strip()
@@ -78,9 +80,9 @@ async def enroll(
     if len(name) > MAX_TEXT or len(phrase) > MAX_TEXT:
         raise HTTPException(400, f"Keep the sound name and phrase under {MAX_TEXT} characters.")
     wav = await _read(audio_file)
-    if audio.is_silent(wav):
+    if audio.is_silent(wav) and role != "background":  # a quiet room is a valid background take
         raise HTTPException(400, "Tink didn't hear a sound in that take. Move closer to the mic and try again.")
-    takes = store.add_take(name, phrase, wav, _cues(cues), role if role in ROLES else "")
+    takes = store.add_take(name, phrase, wav, _cues(cues), role if role in ROLES else "", urgent)
     return {"name": name, "takes": takes}
 
 
@@ -113,8 +115,21 @@ async def recognize(
     matched = top["name"] != bayes.UNKNOWN and top["name"] in phrase
     base = {"p": top["p"], "taught": phrase.get(top["name"]), "ranked": ranked, "scores": scores, "packet": packet}
 
-    # An open yes/no question, answered with the person's own yes or no sound.
     global pending
+    # The room itself: stay quiet and don't disturb an open question.
+    if matched and store.role_of(top["name"]) == "background":
+        return {**base, "matched": False, "name": None, "say": "", "ask": False, "source": "background",
+                "background": True, "taught": None, "dialog": None}
+
+    # Urgent sounds skip the LLM and the questions, and alert even when Tink is less sure.
+    urgent = next((r for r in ranked if store.is_urgent(r["name"]) and r["p"] >= URGENT_MIN), None)
+    if urgent and urgent["name"] in phrase:
+        pending = None
+        recent.append({"time": packet["time"], "said": phrase[urgent["name"]]})
+        return {**base, "p": urgent["p"], "matched": True, "name": urgent["name"], "say": phrase[urgent["name"]],
+                "ask": False, "source": "urgent", "urgent": True, "taught": phrase[urgent["name"]], "dialog": None}
+
+    # An open yes/no question, answered with the person's own yes or no sound.
     role = store.role_of(top["name"]) if matched and top["p"] >= ANSWER_MIN else None
     if pending and role and (now - pending["at"]).total_seconds() < DIALOG_SECONDS:
         asked = pending["options"][pending["i"]]

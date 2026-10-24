@@ -24,7 +24,7 @@ DATA = Path(os.environ.get("TINK_DATA", "data"))
 THRESHOLD = float(os.environ.get("TINK_THRESHOLD", "0.5"))  # on centered cosine; calibrate with risk_test.py
 MIN_SOUNDS = 2  # centering needs two sounds; with one, every clip looks like a match
 MAX_TEXT = 80
-ROLES = ("yes", "no")  # a sound can double as the answer to Tink's yes/no questions
+ROLES = ("yes", "no", "background")  # yes/no answer Tink's questions; background is the room itself
 
 
 def slug(name: str) -> str:
@@ -58,7 +58,8 @@ class Store:
 
     def all(self) -> list[dict]:
         return [
-            {"name": n, "phrase": s["phrase"], "cues": s.get("cues", []), "role": s.get("role"), "takes": len(s["takes"])}
+            {"name": n, "phrase": s["phrase"], "cues": s.get("cues", []), "role": s.get("role"),
+             "urgent": bool(s.get("urgent")), "takes": len(s["takes"])}
             for n, s in self.sounds.items()
         ]
 
@@ -68,10 +69,14 @@ class Store:
     def role_of(self, name: str | None) -> str | None:
         return self.sounds.get(name, {}).get("role") if name else None
 
-    def has_yes_no(self) -> bool:
-        return set(ROLES) <= {s.get("role") for s in self.sounds.values()}
+    def is_urgent(self, name: str | None) -> bool:
+        return bool(self.sounds.get(name, {}).get("urgent")) if name else False
 
-    def add_take(self, name: str, phrase: str, wav: np.ndarray, cues: list[str] | None = None, role: str | None = None) -> int:
+    def has_yes_no(self) -> bool:
+        return {"yes", "no"} <= {s.get("role") for s in self.sounds.values()}
+
+    def add_take(self, name: str, phrase: str, wav: np.ndarray, cues: list[str] | None = None, role: str | None = None,
+                 urgent: bool | None = None) -> int:
         vec = embed(wav)  # before touching state, so a model failure leaves nothing half-written
         s = self.sounds.setdefault(name, {"phrase": phrase, "cues": [], "takes": []})
         s.setdefault("dir", f"{slug(name)[:40]}-{uuid.uuid4().hex[:6]}")
@@ -85,6 +90,8 @@ class Store:
             s["role"] = role
         elif role == "":
             s.pop("role", None)
+        if urgent is not None:
+            s["urgent"] = urgent and s.get("role") != "background"
         rel = f"{s['dir']}/{uuid.uuid4().hex[:8]}.wav"
         path = self.root / "takes" / rel
         path.parent.mkdir(parents=True, exist_ok=True)
