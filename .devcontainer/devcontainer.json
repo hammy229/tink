@@ -1,0 +1,11 @@
+{
+  // A free GitHub Codespace that boots straight into a public-mode Tink on port 8000.
+  // Make the port public to share it: gh codespace ports visibility 8000:public -c <codespace-name>
+  "name": "Tink",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
+  "hostRequirements": { "cpus": 4, "memory": "8gb" },
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y libsndfile1 && pip install --user uv==0.12.23 && ~/.local/bin/uv sync --frozen --no-dev && ~/.local/bin/uv run python -c \"from transformers import AutoFeatureExtractor, AutoModel; m='alkiskoudounas/voc2vec-hubert-ls-pt'; AutoFeatureExtractor.from_pretrained(m); AutoModel.from_pretrained(m)\"",
+  "postStartCommand": "mkdir -p /workspaces/tink-data && nohup env TINK_PUBLIC=1 TINK_DATA=/workspaces/tink-data ~/.local/bin/uv run uvicorn tink.app:app --host 0.0.0.0 --port 8000 > /tmp/tink.log 2>&1 &",
+  "forwardPorts": [8000],
+  "portsAttributes": { "8000": { "label": "Tink", "onAutoForward": "notify" } }
+}
