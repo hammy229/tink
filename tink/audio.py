@@ -33,6 +33,12 @@ def trim(wav: np.ndarray, frame: int = 320, rel: float = 0.1, pad: float = 0.1) 
     return np.pad(wav, (0, short)) if short > 0 else wav
 
 
+def is_silent(wav: np.ndarray, floor: float = 0.005) -> bool:
+    """True when no 20 ms frame is louder than `floor` RMS: nothing to learn from."""
+    n = len(wav) // 320
+    return n == 0 or float(np.sqrt((wav[: n * 320].reshape(n, 320) ** 2).mean(axis=1)).max()) < floor
+
+
 def to_wav_bytes(wav: np.ndarray) -> bytes:
     buf = io.BytesIO()
     sf.write(buf, wav, SR, format="WAV", subtype="PCM_16")
