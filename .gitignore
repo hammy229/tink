@@ -5,3 +5,5 @@ __pycache__/
 .env
 # recorded voices stay local
 data/
+# design review captures stay local
+.impeccable/review/

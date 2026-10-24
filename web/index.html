@@ -7,7 +7,7 @@
 <meta name="description" content="Tink learns the sounds one person makes and says what they mean, in any language.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Gloock&family=JetBrains+Mono:wght@400;600&display=swap">
 <link rel="stylesheet" href="style.css">
 <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
 </head>
@@ -30,7 +30,11 @@
   <main class="main">
     <div class="col">
     <section class="stage idle" id="stage" aria-label="Tink">
+      <div class="scrim" id="scrim">
       <canvas id="dust" aria-hidden="true"></canvas>
+      <svg class="skyline" viewBox="0 0 1200 120" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
+        <path fill-rule="evenodd" d="M0 120V92h40V80h30v15h40V70h8v-8h6v8h26v18h50V76h30V66h6v10h24v14h50V72h30V60l15-10 15 10v12h30v22h50V84h50V70h6V60h6v10h28v16h50v-8h50v14h50V74h30V64h6v10h34v14h40v-8h40V60h18V30l10-8 12-16 12 16 10 8v30h18v22h40V70h30V58l20-14 20 14v12h30v20h40V78h30V68h6v10h24v14h40v28Z M872 42a8 8 0 1 0 16 0a8 8 0 1 0-16 0Z"/>
+      </svg>
 
       <div class="stage-top">
         <div class="status"><span class="bars" id="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span id="statusText">Ready</span></div>
@@ -41,7 +45,6 @@
       </div>
 
       <div class="center" aria-live="polite">
-        <div class="orb" aria-hidden="true"><span class="orb-core"></span></div>
         <div class="phrase" id="phrase">Teach Tink two sounds.</div>
         <div class="why" id="why"></div>
 
@@ -61,6 +64,7 @@
           <button class="btn small" id="right"><i class="ph ph-check" aria-hidden="true"></i>Right</button>
           <button class="btn quiet small" id="wrong"><i class="ph ph-x" aria-hidden="true"></i>Wrong</button>
         </div>
+      </div>
       </div>
 
       <div class="pad">

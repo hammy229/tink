@@ -21,6 +21,7 @@
   let muted = false, lastSaid = null, lastLang = null, lastName = null, lastAsk = false;
   let busy = false, enrolling = false;
   const log = [];
+  const tintOf = (name) => { const i = sounds.findIndex((x) => x.name === name); return i < 0 ? "var(--ash)" : `var(--t${i % 6})`; };
 
   // ---------- API ----------
   async function api(path, opts = {}, ms = 25000) {
@@ -113,7 +114,8 @@
     return new Blob([buf], { type: "audio/wav" });
   }
   // The live mic level drives the light, the bars, and nothing else.
-  const setLevel = (v) => stage.style.setProperty("--lvl", v.toFixed(2));
+  let level = 0;
+  const setLevel = (v) => { level = v; stage.style.setProperty("--lvl", v.toFixed(2)); };
   function micError(e) {
     if (e.message === "silence") return "Tink didn't hear anything. Move closer to the mic and try again.";
     if (e.name === "NotAllowedError") return "Tink needs permission. Allow it in the browser's address bar, then try again.";
@@ -168,8 +170,10 @@
           const v = speechSynthesis.getVoices().find((x) => x.lang === lang) || speechSynthesis.getVoices().find((x) => x.lang.startsWith(lang.slice(0, 2)));
           if (v) u.voice = v;
         }
-        const cap = setTimeout(resolve, Math.max(3000, text.length * 110));
-        u.onend = u.onerror = () => { clearTimeout(cap); resolve(); };
+        document.body.classList.add("speaking");
+        const done = () => { clearTimeout(cap); document.body.classList.remove("speaking"); resolve(); };
+        const cap = setTimeout(done, Math.max(3000, text.length * 110));
+        u.onend = u.onerror = done;
         speechSynthesis.speak(u);
       } catch { resolve(); }
     });
@@ -177,7 +181,11 @@
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
   // ---------- Listen ----------
-  const setStage = (state, status) => { stage.className = `stage ${state}`; statusText.textContent = status; };
+  const scrim = $("scrim");
+  const setStage = (state, status, tint) => {
+    stage.className = `stage ${state}`; statusText.textContent = status;
+    if (tint) scrim.style.setProperty("--scrim", tint); else scrim.style.removeProperty("--scrim");
+  };
   const clock = () => new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   const hideResult = () => { for (const id of ["ranked", "feedback", "taught"]) $(id).hidden = true; };
 
@@ -215,7 +223,8 @@
   function showResult(r) {
     lastAsk = r.ask; lastName = r.name;
     const top = r.ranked[0];
-    setStage(r.matched && !r.ask ? "heard" : "missed", r.ask ? "Checking with you" : "Heard you");
+    const heard = r.matched && !r.ask;
+    setStage(heard ? "heard" : "missed", r.ask ? "Checking with you" : heard ? "Heard you" : "Not sure", heard ? tintOf(r.name) : null);
     phrase.textContent = r.say;
     const cueText = r.packet.webcam_cues.length ? ` · saw ${r.packet.webcam_cues.map(cueLabel).join(", ")}` : "";
     const via = r.source === "grok" ? ` · worded by ${llmModel}` : "";
@@ -230,7 +239,8 @@
     $("hint").textContent = d.asking && !$("loop").checked ? "Press Listen (or space), then make the yes or no sound." : HINT;
 
     $("ranked").innerHTML = r.ranked.slice(0, 3).map((x) => `
-      <li class="${x.name === "unknown" ? "unknown" : ""}">
+      <li class="${x.name === "unknown" ? "unknown" : ""}" style="--t:${tintOf(x.name)}">
+        <span class="sw" aria-hidden="true"></span>
         <span>${x.name === "unknown" ? "Didn't catch it" : esc(x.name)}</span>
         <span class="p"><b>${pct(x.p)}</b> · sound alone ${pct(x.audio_p)}</span>
         <span class="bar" style="width:${Math.max(1.5, x.p * 100)}%"></span>
@@ -248,10 +258,10 @@
 
     const lang = r.source === "grok" ? speakLang().lang : null;
     lastSaid = r.say; lastLang = lang; $("repeat").disabled = false;
-    addLog(r.say, top.p, !r.matched);
+    addLog(r.say, r.ask ? "Asked" : r.matched ? "Said" : "Not caught", r.matched ? r.name : null);
     if (r.matched) renderSounds(r.name);
     chime(r.matched && !r.ask);
-    if (r.matched && !r.ask) burst();
+    if (heard) burst();
     return wait(r.matched && !r.ask ? 350 : 0).then(() => speak(r.say, lang));
   }
 
@@ -265,7 +275,11 @@
       feedbackDone("Thanks. Tink will remember this time of day.");
     } catch (e) { feedbackDone(e.message); }
   });
-  $("wrong").addEventListener("click", () => feedbackDone("Got it. Try the sound again, or teach Tink more takes."));
+  $("wrong").addEventListener("click", () => {
+    const last = log[log.length - 1];
+    if (last && last.stamp === "Said") { last.stamp = "Wrong"; renderLog(); }
+    feedbackDone("Got it. Try the sound again, or teach Tink more takes.");
+  });
   $("useTaught").addEventListener("click", () => {
     const text = $("taughtText").textContent;
     phrase.textContent = text; lastSaid = text; lastLang = null; speak(text);
@@ -273,23 +287,29 @@
     why.insertAdjacentText("beforeend", " · switched to the taught phrase");
   });
 
-  function addLog(text, p, miss) {
-    log.push({ t: clock(), text, p, miss });
-    $("log").innerHTML = log.slice(-12).reverse().map((e) =>
-      `<li><time>${esc(e.t)}</time><span class="${e.miss ? "miss" : ""}">${esc(e.text)}</span><span class="c">${pct(e.p)}</span></li>`).join("");
-    $("logEmpty").hidden = true;
+  // Every turn stays in the log, stamped. A wrong guess is struck through, never removed.
+  function addLog(text, stamp, name) {
+    log.push({ t: clock(), text, stamp, name });
+    renderLog();
+  }
+  function renderLog() {
+    $("log").innerHTML = log.slice(-12).reverse().map((e) => `
+      <li><time>${esc(e.t)}</time><span class="text${e.stamp === "Wrong" ? " struck" : ""}">${esc(e.text)}</span>
+      <span class="stamp${e.stamp === "Wrong" ? " wrong" : ""}" style="--t:${e.name ? tintOf(e.name) : "var(--control-line)"}">${e.stamp}</span></li>`).join("");
+    $("logEmpty").hidden = log.length > 0;
   }
 
   // ---------- Sounds list + first run ----------
   const dots = (n) => Array.from({ length: 5 }, (_, i) => `<i class="${i < n ? "" : "off"}"></i>`).join("");
   function renderSounds(lit) {
     $("sounds").innerHTML = sounds.map((s) => `
-      <li class="sound${s.name === lit ? " lit" : ""}">
+      <li class="sound${s.name === lit ? " lit" : ""}" style="--t:${tintOf(s.name)}">
+        <span class="sw" aria-hidden="true"></span>
         <span class="name">${esc(s.name)}</span>
         <span class="takes" aria-label="${s.takes} takes">${dots(s.takes)}</span>
         <button class="forget" data-name="${esc(s.name)}" aria-label="Forget ${esc(s.name)}" title="Forget"><i class="ph ph-trash" aria-hidden="true"></i></button>
         <span class="says">says "${esc(s.phrase)}"</span>
-        ${s.cues.length || s.role ? `<span class="cuelist">${s.role ? `<span class="cue on">${s.role} answer</span>` : ""}${s.cues.map((c) => `<span class="cue">${cueLabel(c)}</span>`).join("")}</span>` : ""}
+        ${s.cues.length || s.role ? `<span class="cuelist">${s.role ? `<span class="cue role">${s.role} answer</span>` : ""}${s.cues.map((c) => `<span class="cue">${cueLabel(c)}</span>`).join("")}</span>` : ""}
       </li>`).join("");
     $("soundsEmpty").hidden = sounds.length > 0;
     $("count").textContent = sounds.length ? `${sounds.length} sound${sounds.length > 1 ? "s" : ""}` : "";
@@ -394,40 +414,47 @@
     else if (e.key === "Escape" && document.body.classList.contains("present")) togglePresent(false);
   });
 
-  // ---------- Pixie dust ----------
+  // ---------- The light behind the screen ----------
+  // Drawn every frame from the mic level: a warm hotspot that swells with the voice and
+  // blooms when Tink understands. A faint paper fibre texture is generated once.
   const cv = $("dust"), g = cv.getContext("2d");
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let W = 0, H = 0, motes = [];
-  function size() { const r = cv.getBoundingClientRect(), d = devicePixelRatio || 1; W = r.width; H = r.height; cv.width = W * d; cv.height = H * d; g.setTransform(d, 0, 0, d, 0, 0); }
-  const star = () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 0.15, vy: -Math.random() * 0.25 - 0.05, r: Math.random() * 1.4 + 0.4, life: Math.random(), decay: 0.002, star: true });
-  function burst() {
-    if (reduce) return;
-    const o = document.querySelector(".orb").getBoundingClientRect(), s = stage.getBoundingClientRect();
-    const x = o.left - s.left + o.width / 2, y = o.top - s.top + o.height / 2;
-    for (let i = 0; i < 90; i++) {
-      const a = Math.random() * Math.PI * 2, v = 1.5 + Math.random() * 3.5;
-      motes.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1, r: Math.random() * 2 + 0.8, life: 1, decay: 0.01 + Math.random() * 0.01 });
+  let W = 0, H = 0, glow = 0, bloom = 0, t = 0, fibres = null;
+  function size() {
+    const r = cv.getBoundingClientRect(), d = devicePixelRatio || 1;
+    W = r.width; H = r.height; cv.width = W * d; cv.height = H * d; g.setTransform(d, 0, 0, d, 0, 0);
+    fibres = document.createElement("canvas"); fibres.width = W; fibres.height = H;
+    const f = fibres.getContext("2d");
+    f.strokeStyle = "rgba(21,17,14,.07)"; f.lineWidth = 1;
+    for (let i = 0; i < (W * H) / 900; i++) {
+      const x = Math.random() * W, y = Math.random() * H, a = Math.random() * Math.PI, l = 4 + Math.random() * 12;
+      f.beginPath(); f.moveTo(x, y); f.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); f.stroke();
     }
+    if (reduce) frame();
   }
+  function burst() { bloom = 1; if (reduce) frame(); }
   function frame() {
+    t += 1;
+    const lit = stage.classList.contains("listening") || stage.classList.contains("heard");
+    glow += ((lit ? 0.45 : 0.18) + level * 0.9 - glow) * 0.18;
+    bloom *= 0.965;
     g.clearRect(0, 0, W, H);
-    g.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--gold").trim() || "#f2c14e";
-    motes = motes.filter((m) => m.star || m.life > 0);
-    for (const m of motes) {
-      m.x += m.vx; m.y += m.vy;
-      if (!m.star) { m.vy += 0.035; m.vx *= 0.99; }
-      m.life -= m.decay;
-      if (m.star && m.life <= 0) Object.assign(m, star(), { life: 1 });
-      if (m.y < -5) m.y = H + 5;
-      g.globalAlpha = Math.max(0, m.star ? 0.2 + 0.45 * Math.abs(Math.sin(m.life * 6)) : m.life);
-      g.beginPath(); g.arc(m.x, m.y, m.r, 0, 7); g.fill();
-    }
-    g.globalAlpha = 1;
+    const x = W / 2 + Math.sin(t / 90) * W * 0.04, y = H * 0.44 + Math.cos(t / 130) * H * 0.03;
+    const r = Math.max(W, H) * (0.22 + glow * 0.32 + bloom * 0.45);
+    const a = Math.min(0.92, 0.35 + glow * 0.5 + bloom * 0.3);
+    const light = g.createRadialGradient(x, y, 0, x, y, r);
+    light.addColorStop(0, `rgba(255,252,242,${a})`);
+    light.addColorStop(0.45, `rgba(255,248,230,${a * 0.45})`);
+    light.addColorStop(1, "rgba(255,248,230,0)");
+    g.fillStyle = light; g.fillRect(0, 0, W, H);
+    const edge = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
+    edge.addColorStop(0, "rgba(21,17,14,0)"); edge.addColorStop(1, "rgba(21,17,14,.32)");
+    g.fillStyle = edge; g.fillRect(0, 0, W, H);
+    if (fibres) g.drawImage(fibres, 0, 0);
     if (!reduce) requestAnimationFrame(frame);
   }
-  new ResizeObserver(size).observe(stage);
+  new ResizeObserver(size).observe(scrim);
   size();
-  for (let i = 0; i < 70; i++) motes.push(star());
   frame();
 
   refresh().catch((e) => {
