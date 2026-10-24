@@ -3,6 +3,7 @@
 Record takes through the app (Teach a new sound) or drop WAVs into data/takes/<sound>/*.wav, then:
     uv run python risk_test.py [data/takes]
     uv run python risk_test.py --compare     # voc2vec vs HuBERT vs wav2vec2 on the same clips
+    uv run python risk_test.py --augment     # does augmenting each take help on these clips?
 
 For every layer, with and without centering, runs leave-one-out nearest-centroid and prints accuracy.
 Then prints the score spread at the best setting so you can pick TINK_LAYER and TINK_THRESHOLD.
@@ -13,7 +14,7 @@ from pathlib import Path
 import numpy as np
 
 from tink import audio
-from tink.embed import MODEL_ID, layers
+from tink.embed import LAYER, MODEL_ID, embed, layers
 
 
 def unit(v):
@@ -50,6 +51,25 @@ def compare(files, y, models):
         print(f"{m:42} {L:>10} {accs[L]:>9.0%}")
 
 
+def augment_gain(files, y):
+    """Leave-one-out at the app's layer, with centroids built from takes alone vs takes plus variants.
+    The held-out clip is always the original recording, never one of its own variants."""
+    clips = [audio.load(p) for p in files]
+    orig = np.stack([embed(c) for c in clips])
+    aug = [np.stack([embed(v) for v in audio.augment(c)]) for c in clips]
+    for label, use_aug in (("takes only", False), ("takes + augmented variants", True)):
+        hits = 0
+        for i in range(len(y)):
+            keep = [j for j in range(len(y)) if j != i]
+            rows = {c: [orig[j] for j in keep if y[j] == c] + ([v for j in keep if y[j] == c for v in aug[j]] if use_aug else [])
+                    for c in sorted(set(y[keep]))}
+            mu = np.concatenate([np.stack(r) for r in rows.values()]).mean(axis=0)
+            classes = list(rows)
+            cents = unit(np.stack([np.stack(rows[c]).mean(axis=0) - mu for c in classes]))
+            hits += classes[int((cents @ unit(orig[i] - mu)).argmax())] == y[i]
+        print(f"  {label:28} {hits / len(y):>5.0%}  ({hits}/{len(y)})")
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     root = Path(args[0] if args else "data/takes")
@@ -58,6 +78,10 @@ def main():
     counts = {c: int((y == c).sum()) for c in sorted(set(y))}
     if len(counts) < 2 or min(counts.values()) < 2:
         sys.exit(f"Need at least 2 sounds with 2+ takes each in {root}. Found: {counts or 'nothing'}")
+
+    if "--augment" in sys.argv:
+        print(f"{MODEL_ID}, layer {LAYER}\n{len(files)} clips: {counts}\n")
+        return augment_gain(files, y)
 
     if "--compare" in sys.argv:
         print(f"{len(files)} clips: {counts}\n")
