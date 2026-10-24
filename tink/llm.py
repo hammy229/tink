@@ -1,0 +1,57 @@
+"""Grok turns Tink's JSON packet into the sentence Tink says.
+
+Uses xAI's OpenAI-compatible chat completions endpoint. Any failure (no key, timeout, bad JSON)
+returns None and the app falls back to the enrolled phrase, so the demo never stalls.
+List the models your key can use:  curl https://api.x.ai/v1/models -H "Authorization: Bearer $XAI_API_KEY"
+"""
+import json
+import logging
+import os
+
+import httpx
+
+KEY = os.environ.get("XAI_API_KEY")
+MODEL = os.environ.get("TINK_GROK_MODEL", "grok-4.3")
+URL = os.environ.get("TINK_GROK_URL", "https://api.x.ai/v1/chat/completions")
+log = logging.getLogger("tink.llm")
+
+SYSTEM = """You are Tink, the voice of a person who cannot speak in words. They make sounds; a model \
+matched the sound to meanings they taught it. You get a JSON packet with candidate meanings and their \
+probabilities, the time, what they said recently, and cues seen on the webcam.
+
+Reply with JSON only, no other text: {"say": "<what Tink says out loud>", "ask": <true|false>}
+
+Rules:
+- If the top meaning has p >= 0.6 and is not "unknown": speak it in first person, as them, in one short \
+natural sentence. Stay faithful to the taught phrase. You may adjust wording using context, but never \
+add a new need or detail they did not express.
+- If the top two meanings are close (top p < 0.6), set "ask": true and say one short either/or question \
+to them, e.g. "Do you want water, or do you want to rest?"
+- If "unknown" is on top, set "ask": true and gently ask them to make the sound again.
+- Keep "say" under 15 words. No emojis."""
+
+
+def _parse(text: str) -> dict | None:
+    text = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+    out = json.loads(text)
+    if isinstance(out, dict) and isinstance(out.get("say"), str) and out["say"].strip():
+        return {"say": out["say"].strip(), "ask": bool(out.get("ask", False))}
+    return None
+
+
+async def compose(packet: dict) -> dict | None:
+    if not KEY:
+        return None
+    body = {
+        "model": MODEL,
+        "temperature": 0.3,
+        "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": json.dumps(packet)}],
+    }
+    try:
+        async with httpx.AsyncClient(timeout=6) as client:
+            r = await client.post(URL, json=body, headers={"Authorization": f"Bearer {KEY}"})
+            r.raise_for_status()
+            return _parse(r.json()["choices"][0]["message"]["content"])
+    except Exception as e:  # noqa: BLE001 - any failure means "use the fallback"
+        log.warning("Grok failed, using fallback: %s", e)
+        return None
