@@ -168,6 +168,19 @@ async def recognize(
             "say": out["say"], "ask": out["ask"], "source": source, "dialog": dialog}
 
 
+@app.post("/api/reply")
+async def reply(text: str = Form(...), to: str = Form("English")):
+    """Caregiver answer-back: translate what they typed into the person's language and say it."""
+    text, to = text.strip(), (to.strip()[:30] or "English")
+    if not text:
+        raise HTTPException(400, "Type what you want to say first.")
+    if len(text) > 200:
+        raise HTTPException(400, "Keep it under 200 characters so it is easy to hear.")
+    said = await llm.translate(text, to)
+    return {"say": said or text, "typed": text, "to": to, "source": "grok" if said else "typed",
+            "packet": {"text": text, "to": to} if llm.KEY else None}
+
+
 @app.post("/api/confirm")
 async def confirm(name: str = Form(...)):
     """Someone pressed "Right": teach the time-of-day prior that this sound gets used now."""

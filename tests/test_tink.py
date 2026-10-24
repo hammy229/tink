@@ -192,3 +192,21 @@ def test_urgent_sound_alerts_and_skips_the_question(client, monkeypatch):
     r = c.post("/api/recognize", files={"audio": ("a.wav", hiss(seed=9))}).json()
     assert r["urgent"] is True and r["ask"] is False and r["say"] == "Help, it hurts!" and r["source"] == "urgent"
     assert any(s["urgent"] for s in c.get("/api/sounds").json()["sounds"])
+
+
+def test_reply_says_it_as_typed_without_grok(client):
+    c, _, _ = client
+    r = c.post("/api/reply", data={"text": "I'm coming, two minutes.", "to": "Spanish"}).json()
+    assert r["say"] == "I'm coming, two minutes." and r["source"] == "typed" and r["to"] == "Spanish"
+    assert c.post("/api/reply", data={"text": "   "}).status_code == 400
+    assert c.post("/api/reply", data={"text": "x" * 201}).status_code == 400
+
+
+def test_reply_uses_grok_translation_when_available(client, monkeypatch):
+    c, app_module, _ = client
+
+    async def fake_translate(text, to):
+        return "Ya voy, dos minutos."
+    monkeypatch.setattr(app_module.llm, "translate", fake_translate)
+    r = c.post("/api/reply", data={"text": "I'm coming, two minutes.", "to": "Spanish"}).json()
+    assert r["say"] == "Ya voy, dos minutos." and r["source"] == "grok" and r["typed"] == "I'm coming, two minutes."
