@@ -3,25 +3,88 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tink</title>
+<meta name="theme-color" content="#0d0d12">
+<title>Tink — Every sound has something to say</title>
 <meta name="description" content="Tink learns the sounds one person makes and says what they mean, in any language.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Gloock&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@400;500&family=Gloock&display=swap">
 <link rel="stylesheet" href="style.css">
 <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
 </head>
 <body>
+<a class="skip-link" href="#demo">Skip to the live app</a>
+
+<div class="site-shell">
+  <nav class="site-nav" aria-label="Main navigation">
+    <a class="wordmark" href="#top" aria-label="Tink home"><span class="wordmark-star" aria-hidden="true">✦</span><span>Tink</span></a>
+    <div class="nav-links">
+      <a href="#how">How it works</a><a href="#privacy">Privacy</a>
+      <a href="https://github.com/SanjithTammana/Tink-HackTX" target="_blank" rel="noreferrer">GitHub <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+    </div>
+    <a class="nav-cta" href="#demo">Open Tink <i class="ph ph-arrow-down" aria-hidden="true"></i></a>
+  </nav>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <div class="eyebrow"><span></span> Second star to the right · HackTX ’26</div>
+        <h1 id="hero-title">Every sound has<br><em>something to say.</em></h1>
+        <p class="story-hook">Tinker Bell spoke in chimes. Peter understood every one.</p>
+        <p class="hero-lede">Tink learns the hums, clicks, sighs, and short sounds one person can make—then speaks their meaning out loud, in any language.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#demo">Try the live app <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+          <a class="button text-button" href="#how"><span class="play"><i class="ph-fill ph-play" aria-hidden="true"></i></span> See how it works</a>
+        </div>
+        <ul class="hero-notes" aria-label="Key details">
+          <li><i class="ph ph-laptop" aria-hidden="true"></i> Runs locally</li><li><i class="ph ph-waveform" aria-hidden="true"></i> About 5 recordings</li><li><i class="ph ph-translate" aria-hidden="true"></i> Any language</li>
+        </ul>
+      </div>
+
+      <div class="hero-visual" aria-label="A sound becoming a spoken message">
+        <div class="story-moon" aria-hidden="true"></div>
+        <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+        <div class="pixie-trail" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="fairy-light" aria-hidden="true"><span>✦</span><b></b><b></b></div>
+        <div class="signal-window">
+          <div class="window-bar"><span class="window-brand"><b>✦</b> Tink</span><span class="live-dot"><i></i> Listening</span></div>
+          <div class="signal-body">
+            <p class="signal-label">Sound detected</p>
+            <div class="waveform" aria-hidden="true"><i style="--h:22%"></i><i style="--h:48%"></i><i style="--h:32%"></i><i style="--h:74%"></i><i style="--h:45%"></i><i style="--h:92%"></i><i style="--h:58%"></i><i style="--h:100%"></i><i style="--h:62%"></i><i style="--h:82%"></i><i style="--h:38%"></i><i style="--h:68%"></i><i style="--h:28%"></i><i style="--h:52%"></i><i style="--h:20%"></i></div>
+            <div class="meaning-card"><div><span class="meaning-icon"><i class="ph-fill ph-speaker-high" aria-hidden="true"></i></span><span><small>Tink says</small><strong>“I’m thirsty.”</strong></span></div><span class="confidence">94% sure</span></div>
+          </div>
+        </div>
+        <div class="translation-chip"><span>હું ઠંડી છું</span><i class="ph ph-arrow-right" aria-hidden="true"></i><b>I’m cold</b></div>
+        <p class="visual-caption">From a little chime<br>to a meaning everyone can hear.</p>
+      </div>
+    </section>
+
+    <section class="sound-ribbon" aria-label="Sounds Tink can learn"><div><span>Hums</span><i>✦</i><span>Chimes</span><i>✦</i><span>Clicks</span><i>✦</i><span>Understood</span></div></section>
+
+    <section class="manifesto section-pad" aria-labelledby="manifesto-title">
+      <div class="section-kicker">A storybook idea, made real</div>
+      <div class="manifesto-grid"><h2 id="manifesto-title">Tinker Bell had Peter.<br><em>Everyone deserves to be understood.</em></h2><div class="manifesto-copy"><p>In Peter Pan, a sound like little bells could hold an entire thought—because someone knew how to listen.</p><p>For someone living with ALS, recovering from a stroke, or speaking a different language, a repeatable sound can carry a whole sentence. Tink helps the rest of the room understand.</p></div></div>
+    </section>
+
+    <section class="steps section-pad" id="how" aria-labelledby="steps-title">
+      <div class="section-heading"><div><p class="section-kicker">A little magic, taught by you</p><h2 id="steps-title">Your own language<br>of sound.</h2></div><p>No spelling boards. No training run. Teach Tink a handful of examples and it is ready to listen.</p></div>
+      <div class="step-grid">
+        <article class="step-card teach-card"><div class="step-number">01</div><div class="step-visual dots-visual" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div><div><h3>Teach a chime</h3><p>Record a repeatable hum, click, sigh, or vowel about five times and add what it means.</p></div></article>
+        <article class="step-card listen-card"><div class="step-number">02</div><div class="step-visual rings-visual" aria-hidden="true"><span></span><i class="ph-fill ph-microphone"></i></div><div><h3>Make the sound</h3><p>Tink compares it with that person’s vocabulary and shows exactly how sure it is.</p></div></article>
+        <article class="step-card speak-card"><div class="step-number">03</div><div class="step-visual speak-visual" aria-hidden="true"><span>“I need help.”</span><i class="ph-fill ph-speaker-high"></i></div><div><h3>Hear the meaning</h3><p>Tink speaks the taught phrase—or translates it for the listener in the room.</p></div></article>
+      </div>
+    </section>
+
+    <section class="demo-intro section-pad" id="demo" aria-labelledby="demo-title"><div><p class="section-kicker">The real product, not a mockup</p><h2 id="demo-title">Teach it. Try it.<br><em>Be understood.</em></h2></div><p>The app below is live. Teach at least two sounds, then press Listen and make one of them. Your first run downloads the voc2vec model.</p></section>
+  </main>
+</div>
+
+<div class="app-region">
 <div class="wrap">
   <header class="top">
-    <div class="brand">
-      <h1>Tink</h1>
-      <span class="tagline">says what a sound means, in any language</span>
-    </div>
+    <div class="brand"><span class="app-mark" aria-hidden="true">✦</span><div><h2>Tink</h2><span class="tagline">personal sound translator</span></div></div>
     <div class="top-controls">
-      <label class="select" for="speakIn"><i class="ph ph-translate" aria-hidden="true"></i><span class="sr">Speak in</span>
-        <select id="speakIn" aria-label="Tink speaks in"></select>
-      </label>
+      <label class="select" for="speakIn"><i class="ph ph-translate" aria-hidden="true"></i><span>Speak in</span><select id="speakIn" aria-label="Tink speaks in"></select></label>
       <span class="mode" id="mode">voc2vec</span>
       <button class="btn quiet icon-btn" id="present" aria-pressed="false" title="Present mode (P)"><i class="ph ph-corners-out" aria-hidden="true"></i><span>Present</span></button>
     </div>
@@ -29,159 +92,46 @@
 
   <main class="main">
     <div class="col">
-    <section class="stage idle" id="stage" aria-label="Tink">
+    <section class="stage idle" id="stage" aria-label="Tink live translator">
       <div class="scrim" id="scrim">
       <canvas id="dust" aria-hidden="true"></canvas>
-      <svg class="skyline" viewBox="0 0 1200 120" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
-        <path fill-rule="evenodd" d="M0 120V92h40V80h30v15h40V70h8v-8h6v8h26v18h50V76h30V66h6v10h24v14h50V72h30V60l15-10 15 10v12h30v22h50V84h50V70h6V60h6v10h28v16h50v-8h50v14h50V74h30V64h6v10h34v14h40v-8h40V60h18V30l10-8 12-16 12 16 10 8v30h18v22h40V70h30V58l20-14 20 14v12h30v20h40V78h30V68h6v10h24v14h40v28Z M872 42a8 8 0 1 0 16 0a8 8 0 1 0-16 0Z"/>
-      </svg>
-
-      <div class="stage-top">
-        <div class="status"><span class="bars" id="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span id="statusText">Ready</span></div>
-        <div class="cam" id="cam" hidden>
-          <video id="video" muted playsinline aria-label="Webcam preview"></video>
-          <div class="cue-chips" id="liveCues" aria-live="polite"></div>
-        </div>
-      </div>
-
+      <svg class="skyline" viewBox="0 0 1200 120" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M0 120V92h40V80h30v15h40V70h8v-8h6v8h26v18h50V76h30V66h6v10h24v14h50V72h30V60l15-10 15 10v12h30v22h50V84h50V70h6V60h6v10h28v16h50v-8h50v14h50V74h30V64h6v10h34v14h40v-8h40V60h18V30l10-8 12-16 12 16 10 8v30h18v22h40V70h30V58l20-14 20 14v12h30v20h40V78h30V68h6v10h24v14h40v28Z M872 42a8 8 0 1 0 16 0a8 8 0 1 0-16 0Z"/></svg>
+      <div class="stage-top"><div class="status"><span class="bars" id="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span id="statusText">Ready</span></div><div class="cam" id="cam" hidden><video id="video" muted playsinline aria-label="Webcam preview"></video><div class="cue-chips" id="liveCues" aria-live="polite"></div></div></div>
       <div class="center" aria-live="polite">
-        <div class="phrase" id="phrase">Teach Tink two sounds.</div>
-        <div class="why" id="why"></div>
-
-        <ol class="guide" id="guide">
-          <li><b>Teach two sounds</b><span id="guideCount">0 of 2 taught</span></li>
-          <li><b>Press Listen</b><span>and make one of them</span></li>
-          <li><b>Tink says it</b><span>out loud, in the language you pick</span></li>
-        </ol>
-
-        <div class="taught" id="taught" hidden>
-          <span>Taught phrase: <b id="taughtText"></b></span>
-          <button class="linkish" id="useTaught">Say the taught phrase instead</button>
-        </div>
-        <div class="alarm-box" id="alarmBox" hidden role="alert">
-          <button class="btn ack" id="ack"><i class="ph-fill ph-hand-waving" aria-hidden="true"></i><span>I'm here</span></button>
-          <span>Tink repeats this until someone answers.</span>
-        </div>
+        <div class="phrase" id="phrase">Teach Tink two sounds.</div><div class="why" id="why"></div>
+        <ol class="guide" id="guide"><li><b>Teach two sounds</b><span id="guideCount">0 of 2 taught</span></li><li><b>Press Listen</b><span>and make one of them</span></li><li><b>Tink says it</b><span>in the language you pick</span></li></ol>
+        <div class="taught" id="taught" hidden><span>Taught phrase: <b id="taughtText"></b></span><button class="linkish" id="useTaught">Say the taught phrase instead</button></div>
+        <div class="alarm-box" id="alarmBox" hidden role="alert"><button class="btn ack" id="ack"><i class="ph-fill ph-hand-waving" aria-hidden="true"></i><span>I’m here</span></button><span>Tink repeats this until someone answers.</span></div>
         <ol class="ranked" id="ranked" hidden aria-label="How sure Tink is"></ol>
-        <div class="feedback" id="feedback" hidden>
-          <span id="feedbackMsg">Did Tink get it right?</span>
-          <button class="btn small" id="right"><i class="ph ph-check" aria-hidden="true"></i>Right</button>
-          <button class="btn quiet small" id="wrong"><i class="ph ph-x" aria-hidden="true"></i>Wrong</button>
-        </div>
+        <div class="feedback" id="feedback" hidden><span id="feedbackMsg">Did Tink get it right?</span><button class="btn small" id="right"><i class="ph ph-check" aria-hidden="true"></i>Right</button><button class="btn quiet small" id="wrong"><i class="ph ph-x" aria-hidden="true"></i>Wrong</button></div>
       </div>
       </div>
+      <div class="pad"><div class="actions"><button class="btn listen" id="listen" disabled><i class="ph-fill ph-microphone" aria-hidden="true"></i><span>Listen</span></button><button class="btn quiet" id="repeat" disabled><i class="ph ph-speaker-high" aria-hidden="true"></i>Say it again</button><button class="btn quiet" id="mute" aria-pressed="false"><i class="ph ph-speaker-slash" aria-hidden="true"></i><span>Mute voice</span></button></div><div class="toggles"><label class="toggle"><input type="checkbox" id="loop"> Keep listening</label><label class="toggle"><input type="checkbox" id="camera"> Use camera for face cues</label></div><p class="hint" id="hint">Press space to listen. Tink stops by itself when the sound ends.</p><p class="note" id="camNote" hidden><i class="ph ph-lock-simple" aria-hidden="true"></i> Video stays in this browser. Tink keeps only cue names like “smile” or “nod”.</p></div>
+    </section>
 
-      <div class="pad">
-        <div class="actions">
-          <button class="btn listen" id="listen" disabled><i class="ph-fill ph-microphone" aria-hidden="true"></i><span>Listen</span></button>
-          <button class="btn quiet" id="repeat" disabled><i class="ph ph-speaker-high" aria-hidden="true"></i>Say it again</button>
-          <button class="btn quiet" id="mute" aria-pressed="false"><i class="ph ph-speaker-slash" aria-hidden="true"></i><span>Mute voice</span></button>
-        </div>
-        <div class="toggles">
-          <label class="toggle"><input type="checkbox" id="loop"> Keep listening</label>
-          <label class="toggle"><input type="checkbox" id="camera"> Use camera for face cues</label>
-        </div>
-        <p class="hint" id="hint">Press space to listen. Tink stops by itself when the sound ends.</p>
-        <p class="note" id="camNote" hidden><i class="ph ph-lock-simple" aria-hidden="true"></i> Video stays in this browser. Tink keeps only cue names like "smile" or "nod".</p>
-      </div>
-    </section>
-    <section class="panel reply-panel" aria-labelledby="replyTitle">
-      <div class="head">
-        <h2 id="replyTitle">Answer back</h2>
-        <label class="select small-select" for="personLang"><span class="lbl">Their language</span>
-          <select id="personLang" aria-label="The person's language"></select>
-        </label>
-      </div>
-      <form id="replyForm" class="reply-row" novalidate>
-        <label class="sr" for="replyText">What do you want to say to them?</label>
-        <input id="replyText" autocomplete="off" maxlength="200" placeholder="I'm coming, two minutes.">
-        <button type="submit" class="btn" id="replySend"><i class="ph-fill ph-chat-circle-text" aria-hidden="true"></i><span>Say it</span></button>
-      </form>
-      <div class="quick" id="quickReplies" aria-label="Quick replies">
-        <button type="button" class="btn quiet small">I'm coming.</button>
-        <button type="button" class="btn quiet small">Yes.</button>
-        <button type="button" class="btn quiet small">Not yet. Wait a minute.</button>
-        <button type="button" class="btn quiet small">I understand.</button>
-        <button type="button" class="btn quiet small">I'm right here.</button>
-      </div>
-      <p class="err" id="replyErr" role="alert"></p>
-    </section>
-    <div class="lower">
-    <section class="panel" aria-labelledby="logTitle">
-      <div class="head"><h2 id="logTitle">Heard today</h2><small>this session</small></div>
-      <ul class="log" id="log"></ul>
-      <p class="empty" id="logEmpty">Nothing heard yet.</p>
-    </section>
-    <section class="panel" aria-labelledby="leavesTitle">
-      <div class="head"><h2 id="leavesTitle">What leaves this laptop</h2><i class="ph ph-shield-check head-icon" aria-hidden="true"></i></div>
-      <p class="note" id="leavesNote">Audio and video never leave this laptop.</p>
-      <details class="packet" id="packetBox" hidden>
-        <summary>Last message to the LLM</summary>
-        <pre id="packet"></pre>
-      </details>
-    </section>
-  </div>
+    <section class="panel reply-panel" aria-labelledby="replyTitle"><div class="head"><h2 id="replyTitle">Answer back</h2><label class="select small-select" for="personLang"><span class="lbl">Their language</span><select id="personLang" aria-label="The person's language"></select></label></div><form id="replyForm" class="reply-row" novalidate><label class="sr" for="replyText">What do you want to say to them?</label><input id="replyText" autocomplete="off" maxlength="200" placeholder="I’m coming, two minutes."><button type="submit" class="btn" id="replySend"><i class="ph-fill ph-chat-circle-text" aria-hidden="true"></i><span>Say it</span></button></form><div class="quick" id="quickReplies" aria-label="Quick replies"><button type="button" class="btn quiet small">I’m coming.</button><button type="button" class="btn quiet small">Yes.</button><button type="button" class="btn quiet small">Not yet. Wait a minute.</button><button type="button" class="btn quiet small">I understand.</button><button type="button" class="btn quiet small">I’m right here.</button></div><p class="err" id="replyErr" role="alert"></p></section>
+    <div class="lower"><section class="panel" aria-labelledby="logTitle"><div class="head"><h2 id="logTitle">Heard today</h2><small>this session</small></div><ul class="log" id="log"></ul><p class="empty" id="logEmpty">Nothing heard yet.</p></section><section class="panel" aria-labelledby="leavesTitle"><div class="head"><h2 id="leavesTitle">What leaves this laptop</h2><i class="ph ph-shield-check head-icon" aria-hidden="true"></i></div><p class="note" id="leavesNote">Audio and video never leave this laptop.</p><details class="packet" id="packetBox" hidden><summary>Last message to the LLM</summary><pre id="packet"></pre></details></section></div>
     </div>
 
     <aside class="side">
-      <section class="panel" aria-labelledby="soundsTitle">
-        <div class="head"><h2 id="soundsTitle">Sounds Tink knows</h2><small id="count"></small></div>
-        <ul class="sounds" id="sounds"></ul>
-        <p class="selftest" id="selfTest" aria-live="polite"></p>
-        <p class="empty" id="soundsEmpty">Nothing yet. Teach the first sound below: a hum, a click, a sigh, anything the person can repeat.</p>
-      </section>
-
-      <section class="panel" aria-labelledby="teachTitle">
-        <h2 id="teachTitle">Teach a sound</h2>
-        <form id="enroll" novalidate>
-          <div class="field">
-            <label for="sname">What does the sound sound like?</label>
-            <input id="sname" autocomplete="off" maxlength="80" placeholder="Low hum">
-          </div>
-          <div class="field">
-            <label for="sphrase">What does it mean?</label>
-            <input id="sphrase" autocomplete="off" maxlength="80" placeholder="I'm thirsty.">
-            <span class="help">Any language. Tink can say it in another one.</span>
-          </div>
-          <fieldset class="field cue-pick">
-            <legend>Does it usually come with any of these? <span class="optional">Optional</span></legend>
-            <div class="cue-boxes" id="cueBoxes"></div>
-          </fieldset>
-          <fieldset class="field cue-pick">
-            <legend>Can it answer Tink's questions? <span class="optional">Optional</span></legend>
-            <div class="cue-boxes" id="roleBox">
-              <label><input type="radio" name="role" value="" checked> No</label>
-              <label><input type="radio" name="role" value="yes"> It means yes</label>
-              <label><input type="radio" name="role" value="no"> It means no</label>
-            </div>
-            <span class="help">With a yes sound and a no sound, Tink asks instead of guessing when it is unsure.</span>
-          </fieldset>
-          <label class="urgent-pick" for="surgent">
-            <input type="checkbox" id="surgent">
-            <span><b>Urgent</b><span class="help">Pain, can't breathe, help. Tink alarms right away, even when it is less sure, until someone answers.</span></span>
-          </label>
-          <div class="enroll-takes">
-            <button type="submit" class="btn" id="take"><i class="ph-fill ph-record" aria-hidden="true"></i><span>Record take</span></button>
-            <span class="takes" id="enrollDots" aria-live="polite"></span>
-            <button type="button" class="btn quiet" id="done" hidden>Done</button>
-          </div>
-          <span class="help">Record the same sound about 5 times.</span>
-          <p class="err" id="err" role="alert"></p>
-        </form>
-      </section>
-
-      <section class="panel" aria-labelledby="roomTitle">
-        <div class="head"><h2 id="roomTitle">Room noise</h2><small id="roomCount">not recorded</small></div>
-        <p class="help">Record a few seconds of the room with nobody making a sound. Tink then ignores chatter, footsteps, and fans instead of guessing at them.</p>
-        <div class="enroll-takes">
-          <button type="button" class="btn quiet" id="roomTake"><i class="ph ph-waveform" aria-hidden="true"></i><span>Record 3 seconds of room</span></button>
-        </div>
-        <p class="err" id="roomErr" role="alert"></p>
-      </section>
+      <section class="panel" aria-labelledby="soundsTitle"><div class="head"><h2 id="soundsTitle">Sounds Tink knows</h2><small id="count"></small></div><ul class="sounds" id="sounds"></ul><p class="selftest" id="selfTest" aria-live="polite"></p><p class="empty" id="soundsEmpty">Nothing yet. Teach the first sound below: a hum, a click, a sigh—anything the person can repeat.</p></section>
+      <section class="panel" aria-labelledby="teachTitle"><h2 id="teachTitle">Teach a sound</h2><form id="enroll" novalidate><div class="field"><label for="sname">What does the sound sound like?</label><input id="sname" autocomplete="off" maxlength="80" placeholder="Low hum"></div><div class="field"><label for="sphrase">What does it mean?</label><input id="sphrase" autocomplete="off" maxlength="80" placeholder="I’m thirsty."><span class="help">Any language. Tink can say it in another one.</span></div><fieldset class="field cue-pick"><legend>Does it usually come with any of these? <span class="optional">Optional</span></legend><div class="cue-boxes" id="cueBoxes"></div></fieldset><fieldset class="field cue-pick"><legend>Can it answer Tink’s questions? <span class="optional">Optional</span></legend><div class="cue-boxes" id="roleBox"><label><input type="radio" name="role" value="" checked> No</label><label><input type="radio" name="role" value="yes"> It means yes</label><label><input type="radio" name="role" value="no"> It means no</label></div><span class="help">With a yes sound and a no sound, Tink asks instead of guessing.</span></fieldset><label class="urgent-pick" for="surgent"><input type="checkbox" id="surgent"><span><b>Urgent</b><span class="help">Pain, can’t breathe, help. Tink alarms right away until someone answers.</span></span></label><div class="enroll-takes"><button type="submit" class="btn" id="take"><i class="ph-fill ph-record" aria-hidden="true"></i><span>Record take</span></button><span class="takes" id="enrollDots" aria-live="polite"></span><button type="button" class="btn quiet" id="done" hidden>Done</button></div><span class="help">Record the same sound about 5 times.</span><p class="err" id="err" role="alert"></p></form></section>
+      <section class="panel" aria-labelledby="roomTitle"><div class="head"><h2 id="roomTitle">Room noise</h2><small id="roomCount">not recorded</small></div><p class="help">Record a few seconds of the room with nobody making a sound. Tink can ignore chatter, footsteps, and fans instead of guessing.</p><div class="enroll-takes"><button type="button" class="btn quiet" id="roomTake"><i class="ph ph-waveform" aria-hidden="true"></i><span>Record 3 seconds of room</span></button></div><p class="err" id="roomErr" role="alert"></p></section>
     </aside>
   </main>
-
 </div>
+</div>
+
+<div class="site-shell">
+  <section class="privacy section-pad" id="privacy" aria-labelledby="privacy-title">
+    <div class="privacy-copy"><p class="section-kicker">No shadow left behind</p><h2 id="privacy-title">Their voice stays<br><em>theirs.</em></h2><p>Microphone audio stays on the local laptop. Webcam video is analyzed in the browser and is never uploaded. If Grok is enabled, only text—meaning, confidence, time, and cue names—is sent for wording or translation.</p></div>
+    <div class="privacy-diagram" aria-label="Privacy data flow"><div class="privacy-node device"><i class="ph ph-laptop" aria-hidden="true"></i><span><strong>On this device</strong><small>Audio · video · sound model</small></span></div><div class="privacy-line"><span>only when enabled</span><i class="ph ph-arrow-right" aria-hidden="true"></i></div><div class="privacy-node cloud"><i class="ph ph-text-aa" aria-hidden="true"></i><span><strong>Text only</strong><small>Meaning · confidence · cue names</small></span></div></div>
+  </section>
+  <section class="tech section-pad" aria-labelledby="tech-title"><div class="tech-top"><div><p class="section-kicker">Fairy tale on top. Serious science underneath.</p><h2 id="tech-title">Purpose-built for<br>sounds beyond speech.</h2></div><p>Built on voc2vec, a model pretrained on non-verbal vocalizations, with a Bayesian layer that can admit uncertainty instead of forcing a guess.</p></div><div class="pipeline" aria-label="How Tink processes a sound"><div><span>01</span><b>Sound</b><small>Mic clip</small></div><i class="ph ph-arrow-right"></i><div><span>02</span><b>voc2vec</b><small>Sound embedding</small></div><i class="ph ph-arrow-right"></i><div><span>03</span><b>Bayes</b><small>Honest confidence</small></div><i class="ph ph-arrow-right"></i><div><span>04</span><b>Voice</b><small>Meaning, out loud</small></div></div></section>
+  <section class="final-cta"><div class="final-glow" aria-hidden="true">✦</div><div class="final-stars" aria-hidden="true"><i>·</i><i>✦</i><i>·</i><i>✦</i><i>·</i></div><p class="section-kicker">One sound can say everything</p><h2>Let every Tinker Bell<br><em>be understood.</em></h2><div class="hero-actions"><a class="button primary" href="#demo">Open Tink <i class="ph ph-arrow-up" aria-hidden="true"></i></a><a class="button text-button" href="https://github.com/SanjithTammana/Tink-HackTX" target="_blank" rel="noreferrer"><i class="ph ph-github-logo" aria-hidden="true"></i> View the source</a></div></section>
+  <footer><a class="wordmark" href="#top"><span class="wordmark-star" aria-hidden="true">✦</span><span>Tink</span></a><p>Built at HackTX ’26 for communication beyond words.</p><a href="https://github.com/SanjithTammana/Tink-HackTX" target="_blank" rel="noreferrer">GitHub <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a></footer>
+</div>
+
 <script src="app.js"></script>
 <script type="module" src="cues.js"></script>
 </body>
