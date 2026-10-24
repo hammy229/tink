@@ -45,11 +45,23 @@
     sounds = r.sounds; threshold = r.threshold; minSounds = r.min_sounds || 2;
     if (!allCues.length) { allCues = r.cues; renderCueBoxes(); }
     llmModel = r.llm.on ? r.llm.model : null;
+    renderSelfTest(r.calibration || {});
     $("mode").textContent = llmModel ? `voc2vec + ${llmModel}` : "voc2vec";
     $("leavesNote").textContent = llmModel
       ? `Audio and video never leave this laptop. Only the text below goes to ${llmModel}.`
       : "Nothing leaves this laptop. Add an xAI key and Grok will word and translate what Tink says.";
     renderSounds(lit);
+  }
+
+  // Tink tests itself after every change: each recorded take is held out and matched against the rest.
+  function renderSelfTest(c) {
+    const el = $("selfTest");
+    if (!c.ready) {
+      el.innerHTML = sounds.length ? "Record at least 2 takes of 2 sounds and Tink will test itself on them." : "";
+      return;
+    }
+    const sure = c.sure_n ? ` When it was 90% sure or more, it was right <b>${c.sure_right} of ${c.sure_n}</b>.` : "";
+    el.innerHTML = `Self-test on your ${c.n} takes: right on <b>${c.right}</b> (<span class="conf">${pct(c.accuracy)}</span>).${sure}`;
   }
 
   // ---------- Language ----------
