@@ -29,6 +29,8 @@ Judging: Sun 2:00 to 5:00 in WEL (table). Pitching: Sun 5:30 in GDC 2.216 (proje
 
 *(Make an in-between sound on purpose.)* When it isn't sure, it doesn't guess. It asks: "Do you mean 'I'm thirsty'?" *(Make the "no" sound.)* "Do you mean 'I'm cold'?" *(Make the "yes" sound.)* "I'm cold." Two sounds and the misunderstanding is fixed. That's the most important thing it does.
 
+*(Type "I'm coming, two minutes" in Answer back, Their language set to Spanish.)* And it works both ways: the caregiver answers, and the person hears it in their own language. *(Exit present mode first, or do this before pressing P.)*
+
 *(Make the urgent sound.)* Some sounds can't wait. This one skips every question, turns the screen red, and repeats until someone answers. *(Press I'm here.)*
 
 **(1:10) How.** Underneath is voc2vec, a model from ICASSP this year trained only on non-verbal sounds. Five recordings per sound, no training. A small Bayesian model turns similarities into honest probabilities, and learns from time of day and optional face cues. Grok turns that into a sentence in the listener's language. Audio and video never leave the laptop: the screen shows exactly what does.
@@ -44,7 +46,7 @@ Judging: Sun 2:00 to 5:00 in WEL (table). Pitching: Sun 5:30 in GDC 2.216 (proje
 - **Why Bayesian?** Similarity scores aren't probabilities and can't say "none of these." The posterior can, and it gets better with each "Right."
 - **What about privacy?** Audio stays on the laptop. Face cues are computed in the browser and only words like "smile" are kept. Only text goes to Grok, and the screen shows it.
 - **What if Grok is down?** Tink says the taught phrase. It works fully offline except translation.
-- **What would you build next?** Caregivers typing a reply that Tink speaks in the person's language, and a wearable version.
+- **What would you build next?** Spoken caregiver replies instead of typed ones, and a wearable version.
 
 ## If something breaks during judging
 

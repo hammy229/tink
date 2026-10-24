@@ -24,6 +24,8 @@ Some sounds can't wait. A sound marked urgent skips every question and fires eve
 
 Real rooms are noisy, so you can also record a few seconds of the room itself. Tink treats that as one more sound, and when a clip matches the room better than anything the person taught, it stays quiet instead of guessing.
 
+It works both ways. The caregiver can type a reply, like "I'm coming, two minutes," and Tink says it to the person in their own language. A Gujarati-speaking grandmother hears it in Gujarati.
+
 Tink can speak in a different language from the one the phrase was taught in, so a sound taught as "Tengo sed" can come out as "I'm thirsty."
 
 ## How we built it
@@ -64,7 +66,7 @@ Test it with people who actually communicate this way, and their speech therapis
 
 Run it on a phone or a small device worn on a lanyard, so it goes where the person goes.
 
-Let caregivers answer back: type a reply, and Tink says it to the person in their own language.
+Let the caregiver answer by voice instead of typing, transcribed and translated the same way.
 
 ## Built with
 

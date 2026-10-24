@@ -22,7 +22,8 @@ Open http://localhost:8000 in Chrome. Allow the microphone.
 3. Press **Listen** (or space), make a sound, and Tink says what it means.
 4. **Room noise:** press **Record 3 seconds of room** with nobody making a sound (do it 2 or 3 times, in the room you will demo in). Sounds that match the room are ignored.
 5. **Urgent:** tick **Urgent** when teaching a sound like a cry of pain. Tink skips questions, fires at lower confidence, turns the screen red, and repeats the phrase until someone presses **I'm here**.
-6. Pick a language in **Speak in** (top right). With a Grok key, Tink translates the taught phrase into it and speaks it with a matching voice.
+6. **Answer back:** type a reply (or tap a quick reply) and pick **Their language**. Tink translates it with Grok and says it to the person. Without a key it says it as typed.
+7. Pick a language in **Speak in** (top right). With a Grok key, Tink translates the taught phrase into it and speaks it with a matching voice.
 
 | Key | Does |
 |---|---|
@@ -99,6 +100,7 @@ They use synthetic tones, so they need no recordings and never call Grok.
 | POST | `/api/enroll` | form: `name`, `phrase`, `cues` (JSON list), `audio` (WAV) | `{name, takes}` |
 | POST | `/api/recognize` | form: `audio` (WAV), `cues` (JSON list) | `{matched, name, p, say, ask, source, ranked, scores, packet}` |
 | POST | `/api/confirm` | form: `name` | `{ok, usage}` |
+| POST | `/api/reply` | form: `text`, `to` (language) | `{say, typed, to, source, packet}` |
 | DELETE | `/api/sounds/{name}` | | `{ok}` |
 
 ## Layout
