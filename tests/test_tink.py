@@ -130,3 +130,31 @@ def test_store_survives_a_lost_take(client):
     (root / "takes" / app_module.store.sounds["Hum"]["takes"][0]).unlink()
     reloaded = app_module.Store(root)
     assert len(reloaded.sounds["Hum"]["takes"]) == 1
+
+
+def test_yes_no_dialogue_resolves_an_unsure_guess(client, monkeypatch):
+    c, app_module, _ = client
+    monkeypatch.setattr(app_module, "ASK_BELOW", 1.01)  # make every ordinary match a question
+    for i in range(3):
+        enroll(c, "Hum", tone(140, seed=i), "I'm thirsty.")
+        enroll(c, "Hiss", hiss(seed=i), "I'm cold.")
+        c.post("/api/enroll", data={"name": "Ah", "phrase": "Yes", "role": "yes"}, files={"audio": ("a.wav", tone(700, seed=i))})
+        c.post("/api/enroll", data={"name": "Mm", "phrase": "No", "role": "no"}, files={"audio": ("a.wav", tone(1800, seed=i))})
+    ask = c.post("/api/recognize", files={"audio": ("a.wav", tone(142, seed=7))}).json()
+    assert ask["ask"] and ask["dialog"] == {"asking": "Hum"} and "I'm thirsty." in ask["say"]
+
+    no = c.post("/api/recognize", files={"audio": ("a.wav", tone(1800, seed=8))}).json()
+    assert no["dialog"]["answered"] == "no" and no["ask"]
+
+    # ask again from scratch, then answer yes
+    c.post("/api/recognize", files={"audio": ("a.wav", tone(142, seed=9))})
+    yes = c.post("/api/recognize", files={"audio": ("a.wav", tone(700, seed=10))}).json()
+    assert yes["dialog"] == {"answered": "yes", "meant": "Hum"}
+    assert yes["say"] == "I'm thirsty." and yes["ask"] is False and yes["name"] == "Hum"
+
+
+def test_only_one_sound_holds_each_role(client):
+    c, app_module, _ = client
+    c.post("/api/enroll", data={"name": "Ah", "phrase": "Yes", "role": "yes"}, files={"audio": ("a.wav", tone(700))})
+    c.post("/api/enroll", data={"name": "Oh", "phrase": "Yes", "role": "yes"}, files={"audio": ("a.wav", tone(900))})
+    assert app_module.store.role_of("Ah") is None and app_module.store.role_of("Oh") == "yes"

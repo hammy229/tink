@@ -15,12 +15,17 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.staticfiles import StaticFiles
 
 from . import audio, bayes, llm
-from .store import MAX_TEXT, MIN_SOUNDS, THRESHOLD, Store
+from .store import MAX_TEXT, MIN_SOUNDS, ROLES, THRESHOLD, Store
 
 app = FastAPI(title="Tink")
 store = Store()  # loads the model and every take at startup
 recent: deque[dict] = deque(maxlen=5)  # what Tink said lately, for the LLM's context
 ASK_BELOW = 0.6  # top probability under this means Tink asks instead of saying
+DIALOG_SECONDS = 45  # how long a yes/no question stays open
+ANSWER_MIN = 0.6  # a yes or no sound must be at least this sure to answer a question
+# When Tink is unsure and the person has a yes sound and a no sound, Tink asks about one meaning
+# at a time: {"options": [sound names, best first], "i": index being asked about, "at": datetime}.
+pending: dict | None = None
 
 
 async def _read(upload: UploadFile):
@@ -64,6 +69,7 @@ async def enroll(
     name: str = Form(...),
     phrase: str = Form(...),
     cues: str = Form("[]"),
+    role: str = Form(""),
     audio_file: UploadFile = File(..., alias="audio"),
 ):
     name, phrase = name.strip(), phrase.strip()
@@ -74,7 +80,7 @@ async def enroll(
     wav = await _read(audio_file)
     if audio.is_silent(wav):
         raise HTTPException(400, "Tink didn't hear a sound in that take. Move closer to the mic and try again.")
-    takes = store.add_take(name, phrase, wav, _cues(cues))
+    takes = store.add_take(name, phrase, wav, _cues(cues), role if role in ROLES else "")
     return {"name": name, "takes": takes}
 
 
@@ -103,28 +109,48 @@ async def recognize(
         "webcam_cues": post["cues"],
         "recent": list(recent),
     }
+    top = ranked[0]
+    matched = top["name"] != bayes.UNKNOWN and top["name"] in phrase
+    base = {"p": top["p"], "taught": phrase.get(top["name"]), "ranked": ranked, "scores": scores, "packet": packet}
+
+    # An open yes/no question, answered with the person's own yes or no sound.
+    global pending
+    role = store.role_of(top["name"]) if matched and top["p"] >= ANSWER_MIN else None
+    if pending and role and (now - pending["at"]).total_seconds() < DIALOG_SECONDS:
+        asked = pending["options"][pending["i"]]
+        if role == "yes" and asked in phrase:
+            pending = None
+            recent.append({"time": packet["time"], "said": phrase[asked]})
+            return {**base, "matched": True, "name": asked, "say": phrase[asked], "ask": False, "source": "dialog",
+                    "taught": phrase[asked], "dialog": {"answered": "yes", "meant": asked}}
+        pending["i"] += 1
+        pending["at"] = now
+        nxt = pending["options"][pending["i"]] if pending["i"] < len(pending["options"]) else None
+        if nxt in phrase:
+            return {**base, "matched": False, "name": None, "say": f'Do you mean "{phrase[nxt]}"?', "ask": True,
+                    "source": "dialog", "dialog": {"answered": "no", "asking": nxt}}
+        pending = None
+        return {**base, "matched": False, "name": None, "say": "Okay. Make the sound again when you're ready.",
+                "ask": True, "source": "dialog", "dialog": {"answered": "no"}}
+
     out = await llm.compose(packet)
     source = "grok" if out else "phrase"
     out = out or _fallback(ranked, phrase)
-
-    top = ranked[0]
-    matched = top["name"] != bayes.UNKNOWN and top["name"] in phrase
     if not matched or top["p"] < ASK_BELOW:
         out["ask"] = True  # never let wording turn an unsure guess into a statement
+
+    dialog = None
+    pending = None
+    if out["ask"] and store.has_yes_no():
+        options = [r["name"] for r in ranked if r["name"] in phrase and not store.role_of(r["name"])][:3]
+        if options:
+            pending = {"options": options, "i": 0, "at": now}
+            out = {"say": f'Do you mean "{phrase[options[0]]}"?', "ask": True}
+            source, dialog = "dialog", {"asking": options[0]}
     if not out["ask"]:
         recent.append({"time": packet["time"], "said": out["say"]})
-    return {
-        "matched": matched,
-        "name": top["name"] if matched else None,
-        "p": top["p"],
-        "say": out["say"],
-        "ask": out["ask"],
-        "source": source,
-        "taught": phrase.get(top["name"]),
-        "ranked": ranked,
-        "scores": scores,
-        "packet": packet,
-    }
+    return {**base, "matched": matched, "name": top["name"] if matched else None,
+            "say": out["say"], "ask": out["ask"], "source": source, "dialog": dialog}
 
 
 @app.post("/api/confirm")

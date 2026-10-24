@@ -24,6 +24,7 @@ DATA = Path(os.environ.get("TINK_DATA", "data"))
 THRESHOLD = float(os.environ.get("TINK_THRESHOLD", "0.5"))  # on centered cosine; calibrate with risk_test.py
 MIN_SOUNDS = 2  # centering needs two sounds; with one, every clip looks like a match
 MAX_TEXT = 80
+ROLES = ("yes", "no")  # a sound can double as the answer to Tink's yes/no questions
 
 
 def slug(name: str) -> str:
@@ -57,20 +58,33 @@ class Store:
 
     def all(self) -> list[dict]:
         return [
-            {"name": n, "phrase": s["phrase"], "cues": s.get("cues", []), "takes": len(s["takes"])}
+            {"name": n, "phrase": s["phrase"], "cues": s.get("cues", []), "role": s.get("role"), "takes": len(s["takes"])}
             for n, s in self.sounds.items()
         ]
 
     def cues(self) -> dict[str, list[str]]:
         return {n: s.get("cues", []) for n, s in self.sounds.items()}
 
-    def add_take(self, name: str, phrase: str, wav: np.ndarray, cues: list[str] | None = None) -> int:
+    def role_of(self, name: str | None) -> str | None:
+        return self.sounds.get(name, {}).get("role") if name else None
+
+    def has_yes_no(self) -> bool:
+        return set(ROLES) <= {s.get("role") for s in self.sounds.values()}
+
+    def add_take(self, name: str, phrase: str, wav: np.ndarray, cues: list[str] | None = None, role: str | None = None) -> int:
         vec = embed(wav)  # before touching state, so a model failure leaves nothing half-written
         s = self.sounds.setdefault(name, {"phrase": phrase, "cues": [], "takes": []})
         s.setdefault("dir", f"{slug(name)[:40]}-{uuid.uuid4().hex[:6]}")
         s["phrase"] = phrase
         if cues is not None:
             s["cues"] = [c for c in cues if c in CUES]
+        if role in ROLES:
+            for other in self.sounds.values():  # one yes sound and one no sound at a time
+                if other.get("role") == role:
+                    other.pop("role")
+            s["role"] = role
+        elif role == "":
+            s.pop("role", None)
         rel = f"{s['dir']}/{uuid.uuid4().hex[:8]}.wav"
         path = self.root / "takes" / rel
         path.parent.mkdir(parents=True, exist_ok=True)
