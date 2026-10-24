@@ -239,10 +239,10 @@
     $("hint").textContent = d.asking && !$("loop").checked ? "Press Listen (or space), then make the yes or no sound." : HINT;
 
     $("ranked").innerHTML = r.ranked.slice(0, 3).map((x) => `
-      <li class="${x.name === "unknown" ? "unknown" : ""}" style="--t:${tintOf(x.name)}">
+      <li class="${x.name === "unknown" ? "unknown" : ""}${heard && x.name === r.name ? " lead" : ""}" style="--t:${tintOf(x.name)}">
         <span class="sw" aria-hidden="true"></span>
         <span>${x.name === "unknown" ? "Didn't catch it" : esc(x.name)}</span>
-        <span class="p"><b>${pct(x.p)}</b> · sound alone ${pct(x.audio_p)}</span>
+        <span class="p"><b>${pct(x.p)}</b>${pct(x.p) !== pct(x.audio_p) ? ` · sound alone ${pct(x.audio_p)}` : ""}</span>
         <span class="bar" style="width:${Math.max(1.5, x.p * 100)}%"></span>
       </li>`).join("");
     $("ranked").hidden = Boolean(d.answered);
@@ -448,7 +448,7 @@
     light.addColorStop(1, "rgba(255,248,230,0)");
     g.fillStyle = light; g.fillRect(0, 0, W, H);
     const edge = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
-    edge.addColorStop(0, "rgba(21,17,14,0)"); edge.addColorStop(1, "rgba(21,17,14,.32)");
+    edge.addColorStop(0, "rgba(21,17,14,0)"); edge.addColorStop(1, `rgba(21,17,14,${lit ? 0.3 : 0.14})`);
     g.fillStyle = edge; g.fillRect(0, 0, W, H);
     if (fibres) g.drawImage(fibres, 0, 0);
     if (!reduce) requestAnimationFrame(frame);
