@@ -67,9 +67,12 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("TINK_DATA", str(tmp_path))
     import importlib
 
-    from tink import app as app_module, store as store_module
+    from tink import app as app_module, profiles as profiles_module, store as store_module
     importlib.reload(store_module)
+    importlib.reload(profiles_module)
     importlib.reload(app_module)
+    app_module.store = app_module.profiles.get(None).store  # the local profile, as before profiles existed
+    app_module.Store = store_module.Store
     monkeypatch.setattr(app_module.llm, "KEY", None)  # never call Grok from tests
     from fastapi.testclient import TestClient
     return TestClient(app_module.app), app_module, tmp_path
@@ -232,3 +235,47 @@ def test_calibration_self_test_fits_temperature_and_threshold(client):
     assert app_module.store.threshold == cal["threshold"]
     c.delete("/api/sounds/Hiss")
     assert c.get("/api/sounds").json()["calibration"]["ready"] is False  # recalibrates on forget
+
+
+@pytest.fixture()
+def public(tmp_path, monkeypatch):
+    monkeypatch.setenv("TINK_DATA", str(tmp_path))
+    monkeypatch.setenv("TINK_PUBLIC", "1")
+    import importlib
+
+    from tink import app as app_module, profiles as profiles_module, store as store_module
+    importlib.reload(store_module)
+    importlib.reload(profiles_module)
+    importlib.reload(app_module)
+    monkeypatch.setattr(app_module.llm, "KEY", None)
+    from fastapi.testclient import TestClient
+    yield TestClient(app_module.app), app_module
+    monkeypatch.delenv("TINK_PUBLIC")
+    importlib.reload(profiles_module)
+    importlib.reload(app_module)
+
+
+def test_public_mode_needs_a_profile_and_keeps_people_apart(public):
+    c, _ = public
+    assert c.get("/api/sounds").status_code == 404  # no default profile on a shared server
+    a = c.post("/api/profiles", data={"name": "Maya"}).json()
+    b = c.post("/api/profiles", data={"name": "Ravi"}).json()
+    assert a["id"] != b["id"] and len(a["id"]) >= 16
+    for i in range(2):
+        c.post("/api/enroll", data={"name": "Hum", "phrase": "I'm thirsty."}, files={"audio": ("a.wav", tone(140, seed=i))},
+               headers={"X-Tink-Profile": a["id"]})
+    maya = c.get("/api/sounds", headers={"X-Tink-Profile": a["id"]}).json()
+    ravi = c.get(f"/api/sounds?p={b['id']}").json()
+    assert [s["name"] for s in maya["sounds"]] == ["Hum"] and ravi["sounds"] == []
+    assert maya["profile"]["name"] == "Maya" and maya["profile"]["public"] is True
+
+
+def test_public_mode_rejects_bad_links_and_big_uploads(public):
+    c, app_module = public
+    assert c.get("/api/sounds", headers={"X-Tink-Profile": "../../etc"}).status_code == 404
+    assert c.get("/api/sounds", headers={"X-Tink-Profile": "A" * 20}).status_code == 404
+    pid = c.post("/api/profiles", data={"name": "Maya"}).json()["id"]
+    big = b"0" * (app_module.MAX_UPLOAD + 10)
+    r = c.post("/api/enroll", data={"name": "x", "phrase": "y"}, files={"audio": ("a.wav", big)}, headers={"X-Tink-Profile": pid})
+    assert r.status_code == 413
+    assert c.post("/api/profiles", data={"name": "  "}).status_code == 400
