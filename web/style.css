@@ -98,6 +98,8 @@ body.speaking .top, body.speaking .side, body.speaking .lower, body.speaking .pa
 .missed .scrim { --scrim: var(--paper-dim); }
 .error .scrim { --scrim: var(--ash); }
 /* .heard sets --scrim inline to the heard sound's tint */
+/* on the lit screen, focus is drawn in ink: the lamp colour would vanish against the paper or an amber tint */
+.scrim :focus-visible { outline-color: var(--ink); }
 
 .stage-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
 .status { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 15px; min-height: 32px; color: var(--ink); }
@@ -120,7 +122,7 @@ body.speaking .top, body.speaking .side, body.speaking .lower, body.speaking .pa
 .guide li::before { content: counter(step); font-family: var(--display); font-size: 30px; line-height: 1; }
 .guide b { font-size: 16px; }
 .guide span { font-size: 14.5px; opacity: .8; }
-.guide li.done::before { content: "✓"; }
+.guide li.done b::after { content: " · done"; font-weight: 400; }
 @media (max-width: 560px) { .guide { grid-template-columns: 1fr; } .guide li + li { border-left: 0; padding-left: 0; border-top: 1px solid rgba(21, 17, 14, .35); } }
 
 /* result, set in ink on the screen */
