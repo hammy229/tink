@@ -6,6 +6,7 @@
   const pct = (p) => `${Math.round(p * 100)}%`;
   const cueLabel = (c) => c.replace("_", " ");
   const stage = $("stage"), phrase = $("phrase"), why = $("why"), statusText = $("statusText");
+  const HINT = $("hint").textContent;
 
   // Languages Tink can speak in. `name` goes to the LLM, `lang` picks the speech voice.
   const LANGS = [
@@ -218,9 +219,15 @@
     phrase.textContent = r.say;
     const cueText = r.packet.webcam_cues.length ? ` · saw ${r.packet.webcam_cues.map(cueLabel).join(", ")}` : "";
     const via = r.source === "grok" ? ` · worded by ${llmModel}` : "";
-    why.innerHTML = r.matched
+    const d = r.dialog || {};
+    why.innerHTML = d.asking
+      ? `${d.answered === "no" ? "Okay, not that. " : ""}Answer with your <b>yes</b> or <b>no</b> sound.`
+      : d.answered === "yes" ? `You said <b>yes</b>.`
+      : d.answered === "no" ? `You said <b>no</b>.`
+      : r.matched
       ? `Heard <b>${esc(top.name.toLowerCase())}</b> · <span class="conf">${pct(top.p)}</span> sure${cueText}${via}`
       : `Nothing matched closely enough${cueText}`;
+    $("hint").textContent = d.asking && !$("loop").checked ? "Press Listen (or space), then make the yes or no sound." : HINT;
 
     $("ranked").innerHTML = r.ranked.slice(0, 3).map((x) => `
       <li class="${x.name === "unknown" ? "unknown" : ""}">
@@ -228,7 +235,7 @@
         <span class="p"><b>${pct(x.p)}</b> · sound alone ${pct(x.audio_p)}</span>
         <span class="bar" style="width:${Math.max(1.5, x.p * 100)}%"></span>
       </li>`).join("");
-    $("ranked").hidden = false;
+    $("ranked").hidden = Boolean(d.answered);
     $("packet").textContent = JSON.stringify(r.packet, null, 2);
     $("packetBox").hidden = !llmModel;
     $("feedback").hidden = !r.matched;
@@ -282,7 +289,7 @@
         <span class="takes" aria-label="${s.takes} takes">${dots(s.takes)}</span>
         <button class="forget" data-name="${esc(s.name)}" aria-label="Forget ${esc(s.name)}" title="Forget"><i class="ph ph-trash" aria-hidden="true"></i></button>
         <span class="says">says "${esc(s.phrase)}"</span>
-        ${s.cues.length ? `<span class="cuelist">${s.cues.map((c) => `<span class="cue">${cueLabel(c)}</span>`).join("")}</span>` : ""}
+        ${s.cues.length || s.role ? `<span class="cuelist">${s.role ? `<span class="cue on">${s.role} answer</span>` : ""}${s.cues.map((c) => `<span class="cue">${cueLabel(c)}</span>`).join("")}</span>` : ""}
       </li>`).join("");
     $("soundsEmpty").hidden = sounds.length > 0;
     $("count").textContent = sounds.length ? `${sounds.length} sound${sounds.length > 1 ? "s" : ""}` : "";
@@ -344,7 +351,9 @@
       $("enroll").classList.remove("recording"); takeLabel("Saving");
       const cues = [...document.querySelectorAll("#cueBoxes input:checked")].map((i) => i.value);
       const fd = new FormData();
-      fd.append("name", name); fd.append("phrase", says); fd.append("cues", JSON.stringify(cues)); fd.append("audio", clip, "take.wav");
+      fd.append("name", name); fd.append("phrase", says); fd.append("cues", JSON.stringify(cues));
+      fd.append("role", document.querySelector('#roleBox input:checked')?.value || "");
+      fd.append("audio", clip, "take.wav");
       const r = await api("/api/enroll", { method: "POST", body: fd });
       enrollTakes = r.takes; drawTakes(); chime(true);
       $("sname").readOnly = true; $("done").hidden = false;
