@@ -20,6 +20,10 @@ A caregiver teaches it a sound: type what it sounds like ("low hum") and what it
 
 If it isn't sure, it doesn't pretend to be. Below a threshold it says "I didn't catch that." When two meanings are close, it asks. If the person has taught Tink a "yes" sound and a "no" sound, Tink asks about one meaning at a time ("Do you mean 'I'm thirsty'?"), and the person answers with their own sounds. A misunderstanding gets fixed in two sounds instead of a guessing game.
 
+Some sounds can't wait. A sound marked urgent skips every question and fires even when Tink is less sure, because a missed alarm costs more than a false one. The screen turns red and Tink repeats the phrase until someone presses "I'm here."
+
+Real rooms are noisy, so you can also record a few seconds of the room itself. Tink treats that as one more sound, and when a clip matches the room better than anything the person taught, it stays quiet instead of guessing.
+
 Tink can speak in a different language from the one the phrase was taught in, so a sound taught as "Tengo sed" can come out as "I'm thirsty."
 
 ## How we built it

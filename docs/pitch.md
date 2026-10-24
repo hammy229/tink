@@ -12,9 +12,10 @@ Judging: Sun 2:00 to 5:00 in WEL (table). Pitching: Sun 5:30 in GDC 2.216 (proje
    - Long sigh: "I'm tired. Can we rest?"
    - One taught in another language, e.g. "Tengo frío." (Spanish for "I'm cold.")
    - A short "ah" marked **It means yes**, and a short "mm" marked **It means no**.
-4. Do 3 test runs. If one misses, record 2 more takes of that sound and try again.
-5. Volume up. Close other tabs that might play sound.
-6. `XAI_API_KEY` set and one test run shows "worded by grok" under the phrase. If the wifi is bad, unset the key and restart: Tink falls back to the taught phrases and still works offline. (The webcam cue model loads from a CDN; leave the camera off if wifi is bad.)
+4. Record **room noise** 3 times in the judging room itself, and teach one **urgent** sound (e.g. a sharp "ah!" meaning "Help, it hurts!").
+5. Do 3 test runs. If one misses, record 2 more takes of that sound and try again.
+6. Volume up. Close other tabs that might play sound.
+7. `XAI_API_KEY` set and one test run shows "worded by grok" under the phrase. If the wifi is bad, unset the key and restart: Tink falls back to the taught phrases and still works offline. (The webcam cue model loads from a CDN; leave the camera off if wifi is bad.)
 
 ## 2-minute pitch
 
@@ -27,6 +28,8 @@ Judging: Sun 2:00 to 5:00 in WEL (table). Pitching: Sun 5:30 in GDC 2.216 (proje
 *(Second sound: the Spanish one, with Speak in set to English.)* This one was taught in Spanish. Tink says it in English.
 
 *(Make an in-between sound on purpose.)* When it isn't sure, it doesn't guess. It asks: "Do you mean 'I'm thirsty'?" *(Make the "no" sound.)* "Do you mean 'I'm cold'?" *(Make the "yes" sound.)* "I'm cold." Two sounds and the misunderstanding is fixed. That's the most important thing it does.
+
+*(Make the urgent sound.)* Some sounds can't wait. This one skips every question, turns the screen red, and repeats until someone answers. *(Press I'm here.)*
 
 **(1:10) How.** Underneath is voc2vec, a model from ICASSP this year trained only on non-verbal sounds. Five recordings per sound, no training. A small Bayesian model turns similarities into honest probabilities, and learns from time of day and optional face cues. Grok turns that into a sentence in the listener's language. Audio and video never leave the laptop: the screen shows exactly what does.
 
