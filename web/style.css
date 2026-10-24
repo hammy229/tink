@@ -100,6 +100,8 @@ body.speaking .top, body.speaking .side, body.speaking .lower, body.speaking .pa
 .skyline.far { width: 200%; right: auto; height: 62px; bottom: 30px; opacity: .1; animation: drift 140s linear infinite; }
 .skyline.farther { width: 200%; right: auto; height: 50px; bottom: 52px; opacity: .055; animation: drift 220s linear infinite reverse; }
 @keyframes drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+/* nobody is watching a hidden tab: the city holds still until it is back */
+.tab-hidden .skyline { animation-play-state: paused; }
 body.present .skyline.far { height: 92px; bottom: 44px; }
 body.present .skyline.farther { height: 74px; bottom: 76px; }
 .scrim > :not(canvas):not(.skyline) { position: relative; }
@@ -234,8 +236,8 @@ form { display: grid; gap: 14px; }
 .cue-boxes input { width: 18px; height: 18px; margin: 0; }
 .enroll-takes { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .enroll-takes .takes i { width: 14px; height: 14px; }
-.takes i.new { animation: pop .4s cubic-bezier(.2, 1.5, .4, 1) both; }
-@keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+.takes i.new { animation: pop .32s var(--ease) both; }
+@keyframes pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 #roomTake { position: relative; overflow: hidden; isolation: isolate; }
 #roomTake::after { content: ""; position: absolute; inset: 0; z-index: -1; background: color-mix(in srgb, var(--light) 28%, transparent); transform-origin: left; transform: scaleX(0); }
 #roomTake.filling::after { animation: fill 3s linear forwards; }

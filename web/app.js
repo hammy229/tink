@@ -636,6 +636,8 @@
     if (fibres) g.drawImage(fibres, 0, 0);
     if (!reduce) requestAnimationFrame(frame);
   }
+  // the skyline drift is a loop nobody sees in a background tab
+  document.addEventListener("visibilitychange", () => document.documentElement.classList.toggle("tab-hidden", document.hidden));
   new ResizeObserver(size).observe(scrim);
   size();
   frame();
