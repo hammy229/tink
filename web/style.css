@@ -72,11 +72,10 @@ body.speaking .top, body.speaking .side, body.speaking .lower, body.speaking .pa
 @keyframes ring { from { transform: scale(.96); opacity: .7; } to { transform: scale(1.12); opacity: 0; } }
 
 /* ---------- layout ---------- */
-.main { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(330px, 1fr); gap: 22px; align-items: stretch; }
-.col { display: grid; grid-template-rows: auto 1fr; gap: 22px; min-width: 0; }
+.main { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(330px, 1fr); gap: 22px; align-items: start; }
+.col { display: grid; gap: 22px; min-width: 0; }
 .side { align-self: start; }
-.lower { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; align-items: stretch; }
-.lower .panel { align-content: start; }
+.lower { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; align-items: start; }
 @media (max-width: 980px) { .main { grid-template-columns: 1fr; } }
 @media (max-width: 700px) { .lower { grid-template-columns: 1fr; } }
 
@@ -130,10 +129,10 @@ body.speaking .top, body.speaking .side, body.speaking .lower, body.speaking .pa
 .ranked { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; width: min(460px, 100%); text-align: left; }
 .ranked li { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; font-size: 15.5px; align-items: center; }
 .ranked .sw { width: 14px; height: 14px; border-radius: 4px; background: var(--t); border: 2px solid var(--ink); }
-.ranked li.lead .sw { background: var(--ink); }
+.ranked li.lead .sw, .ranked li.lead .bar { background: var(--ink); }
 .ranked .p { font-family: var(--mono); font-size: 13.5px; font-variant-numeric: tabular-nums; }
 .ranked .bar { grid-column: 1 / -1; height: 8px; border-radius: 4px; background: var(--t); box-shadow: inset 0 0 0 1.5px var(--ink); transform-origin: left; animation: grow .6s var(--ease); }
-.ranked li.unknown .bar { background: transparent; }
+.ranked li.unknown .bar { background: rgba(21, 17, 14, .3); box-shadow: none; }
 @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .feedback { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; font-size: 15.5px; }
 .feedback .btn { background: var(--ink); color: var(--paper); }
