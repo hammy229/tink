@@ -205,7 +205,7 @@ body.present .btn.ack { min-height: 88px; font-size: 28px; }
 .selftest b { color: var(--fg); }
 .selftest:empty { display: none; }
 .sounds { list-style: none; margin: 0; padding: 0; display: grid; }
-.sound { display: grid; grid-template-columns: auto 1fr auto auto; gap: 2px 12px; padding: 12px 6px; align-items: center; border-top: 1px solid var(--line); transition: background .3s; border-radius: 10px; }
+.sound { display: grid; grid-template-columns: auto 1fr auto auto auto; gap: 2px 12px; padding: 12px 6px; align-items: center; border-top: 1px solid var(--line); transition: background .3s; border-radius: 10px; }
 .sound:first-child { border-top: 0; }
 .sound .sw { width: 18px; height: 18px; border-radius: 5px; background: var(--t); }
 .sound.learned .sw { animation: learned .6s var(--ease); }
@@ -217,6 +217,11 @@ body.present .btn.ack { min-height: 88px; font-size: 28px; }
 .sound .cuelist { display: flex; gap: 4px; flex-wrap: wrap; }
 .cue.role { border-color: var(--t); color: var(--fg); }
 .forget { display: inline-flex; align-items: center; justify-content: center; border: 0; background: none; color: var(--muted); min-width: 40px; min-height: 40px; border-radius: 10px; font-size: 18px; }
+.bank { display: inline-flex; align-items: center; justify-content: center; border: 0; background: none; color: var(--muted); min-width: 40px; min-height: 40px; border-radius: 10px; font-size: 18px; }
+.bank:hover { color: var(--fg); background: color-mix(in srgb, var(--light) 14%, transparent); }
+.bank.recording { color: var(--ink); background: var(--miss); }
+.cue.voice { display: inline-flex; gap: 4px; align-items: center; cursor: pointer; background: none; font: inherit; font-size: 13.5px; border-color: var(--light); color: var(--fg); }
+.cue.voice:hover { background: color-mix(in srgb, var(--light) 16%, transparent); }
 .forget:hover { color: var(--miss); background: color-mix(in srgb, var(--miss) 12%, transparent); }
 .confirm-row { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding-top: 8px; font-size: 15px; }
 .takes { display: flex; gap: 4px; align-items: center; }

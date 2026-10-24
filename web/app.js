@@ -56,9 +56,13 @@
   async function refresh(lit) {
     const r = await api("/api/sounds");
     sounds = r.sounds; threshold = r.threshold; minSounds = r.min_sounds || 2;
+    voiced = new Set(sounds.filter((s) => s.voice).map((s) => s.name));
     if (!allCues.length) { allCues = r.cues; renderCueBoxes(); }
     llmModel = r.llm.on ? r.llm.model : null;
     isPublic = Boolean(r.profile?.public);
+    // The LLM (wording and translation) is optional and off unless a key is set; hide its controls then.
+    $("speakInBox").hidden = $("personLangBox").hidden = !llmModel;
+    if (!llmModel) $("packetBox").hidden = true;
     $("profileChip").hidden = !isPublic;
     if (isPublic) $("profileName").textContent = r.profile.name;
     renderSelfTest(r.calibration || {});
@@ -67,7 +71,7 @@
       ? `Recordings go only to this Tink server, kept under your private link. Video never leaves your browser.${llmModel ? ` Only the text below goes to ${llmModel}.` : ""}`
       : llmModel
       ? `Audio and video never leave this laptop. Only the text below goes to ${llmModel}.`
-      : "Nothing leaves this laptop. Add an xAI key and Grok will word and translate what Tink says.";
+      : "Everything stays on this laptop: every sound, every banked voice, every word.";
     renderSounds(lit);
   }
 
@@ -89,7 +93,7 @@
   const speakLang = () => LANGS[speakSel.value] || LANGS[0];
   speakSel.addEventListener("change", () => {
     try { localStorage.setItem("tink.speakIn", speakSel.value); } catch {}
-    if (!llmModel && speakLang().name !== "English") $("hint").textContent = "Translation needs Grok. Without a key, Tink says the taught phrase as written.";
+
   });
 
   // ---------- Mic recording ----------
@@ -214,6 +218,31 @@
     });
   }
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // ---------- Their own voice ----------
+  // Message banking: while the person can still speak, they record each phrase in their own voice.
+  // Tink plays that recording instead of a synthetic voice whenever the sound is heard.
+  const voiceCache = new Map();
+  let voiced = new Set(), player = null, lastVoiceName = null;
+  async function playVoice(name) {
+    if (muted) return;
+    let url = voiceCache.get(name);
+    if (!url) {
+      const r = await fetch(`/api/voice/${encodeURIComponent(name)}`, { headers: profileId ? { "X-Tink-Profile": profileId } : {} });
+      if (!r.ok) throw new Error("no banked voice");
+      url = URL.createObjectURL(await r.blob());
+      voiceCache.set(name, url);
+    }
+    player?.pause();
+    player = new Audio(url);
+    document.body.classList.add("speaking");
+    try { await new Promise((res) => { player.onended = player.onerror = res; player.play().catch(res); }); }
+    finally { document.body.classList.remove("speaking"); }
+  }
+  // Their banked voice when there is one (and the words were not reworded), otherwise the computer voice.
+  const sayFor = (name, text, lang) => (name && voiced.has(name) && !lang
+    ? playVoice(name).catch(() => speak(text, lang))
+    : speak(text, lang));
 
   // ---------- Listen ----------
   const scrim = $("scrim");
@@ -358,7 +387,8 @@
     if (r.matched) renderSounds(r.name);
     chime(r.matched && !r.ask);
     if (heard) burst();
-    return wait(r.matched && !r.ask ? 350 : 0).then(() => speak(r.say, lang));
+    lastVoiceName = heard ? r.name : null;
+    return wait(r.matched && !r.ask ? 350 : 0).then(() => sayFor(lastVoiceName, r.say, lang));
   }
 
   function feedbackDone(msg) {
@@ -379,7 +409,7 @@
   });
   $("useTaught").addEventListener("click", () => {
     const text = $("taughtText").textContent;
-    castPhrase(text); lastSaid = text; lastLang = null; speak(text);
+    castPhrase(text); lastSaid = text; lastLang = null; sayFor(lastName, text);
     $("taught").hidden = true;
     why.insertAdjacentText("beforeend", " · switched to the taught phrase");
   });
@@ -404,9 +434,10 @@
         <span class="sw" aria-hidden="true"></span>
         <span class="name">${esc(s.name)}</span>
         <span class="takes" aria-label="${s.takes} takes">${dots(s.takes)}</span>
+        ${isRoom(s) ? "<span></span>" : `<button class="bank" data-name="${esc(s.name)}" aria-label="Record them saying ${esc(s.phrase)}" title="Record them saying it"><i class="ph ph-microphone-stage" aria-hidden="true"></i></button>`}
         <button class="forget" data-name="${esc(s.name)}" aria-label="Forget ${esc(s.name)}" title="Forget"><i class="ph ph-trash" aria-hidden="true"></i></button>
         <span class="says">says "${esc(s.phrase)}"</span>
-        ${s.cues.length || s.role || s.urgent ? `<span class="cuelist">${s.urgent ? `<span class="cue urgent">urgent</span>` : ""}${isRoom(s) ? `<span class="cue">room noise, ignored</span>` : s.role ? `<span class="cue role">${s.role} answer</span>` : ""}${s.cues.map((c) => `<span class="cue">${cueLabel(c)}</span>`).join("")}</span>` : ""}
+        ${s.cues.length || s.role || s.urgent || s.voice ? `<span class="cuelist">${s.voice ? `<button class="cue voice" data-name="${esc(s.name)}" title="Play their voice"><i class="ph-fill ph-play" aria-hidden="true"></i> own voice</button>` : ""}${s.urgent ? `<span class="cue urgent">urgent</span>` : ""}${isRoom(s) ? `<span class="cue">room noise, ignored</span>` : s.role ? `<span class="cue role">${s.role} answer</span>` : ""}${s.cues.map((c) => `<span class="cue">${cueLabel(c)}</span>`).join("")}</span>` : ""}
       </li>`).join("");
     $("soundsEmpty").hidden = sounds.length > 0;
     const real = realSounds().length, room = sounds.find(isRoom);
@@ -429,6 +460,9 @@
   }
   // Forgetting deletes the recorded takes, so it asks once, inline, and waits for an answer.
   $("sounds").addEventListener("click", async (e) => {
+    const bank = e.target.closest(".bank"), play = e.target.closest(".cue.voice");
+    if (bank) return bankVoice(bank.dataset.name, bank);
+    if (play) return playVoice(play.dataset.name).catch(() => {});
     const forget = e.target.closest(".forget"), yes = e.target.closest(".confirm-yes"), no = e.target.closest(".confirm-no");
     if (forget) {
       const li = forget.closest(".sound");
@@ -476,7 +510,7 @@
       fd.append("audio", clip, "take.wav");
       const r = await api("/api/enroll", { method: "POST", body: fd });
       enrollTakes = r.takes; drawTakes(true); chime(true);
-      $("sname").readOnly = true; $("done").hidden = false;
+      $("sname").readOnly = true; $("done").hidden = false; $("bankNow").hidden = false;
       await refresh(name);
     } catch (err) {
       $("err").textContent = micError(err);
@@ -486,7 +520,7 @@
     takeLabel(enrollTakes >= 5 ? "Record another take" : enrollTakes ? "Record next take" : "Record take");
   });
   $("done").addEventListener("click", () => {
-    enrollTakes = 0; drawTakes(); $("enroll").reset(); $("surgent").checked = false; $("sname").readOnly = false; $("done").hidden = true; $("err").textContent = "";
+    enrollTakes = 0; drawTakes(); $("enroll").reset(); $("surgent").checked = false; $("bankNow").hidden = true; $("sname").readOnly = false; $("done").hidden = true; $("err").textContent = "";
     takeLabel("Record take"); $("sname").focus();
   });
 
@@ -512,7 +546,7 @@
       castPhrase(r.say);
       why.innerHTML = r.say !== r.typed
         ? `You typed: <b>${esc(r.typed)}</b> · translated into ${esc(r.to)} by ${esc(llmModel || "Grok")}`
-        : personLang().name !== "English" && !llmModel ? "Said as typed. Translation needs an xAI key." : "From you";
+        : "From you";
       if (r.packet) { $("packet").textContent = JSON.stringify(r.packet, null, 2); $("packetBox").hidden = false; }
       lastSaid = r.say; lastLang = r.source === "grok" ? personLang().lang : null; $("repeat").disabled = false;
       addLog(r.say, "Replied", null);
@@ -526,6 +560,31 @@
   }
   $("replyForm").addEventListener("submit", (e) => { e.preventDefault(); sendReply($("replyText").value); });
   $("quickReplies").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) sendReply(b.textContent); });
+
+  async function bankVoice(name, button) {
+    const s = sounds.find((x) => x.name === name);
+    if (!s) return;
+    if (busy || enrolling || alarmOn) { $("err").textContent = "Turn off Keep listening first, then record their voice."; return; }
+    enrolling = true; button?.classList.add("recording"); $("listen").disabled = true; hideResult();
+    setStage("listening", "Recording their voice");
+    castPhrase(s.phrase);
+    why.textContent = "Ask them to say this out loud, in their own voice. Tink stops when they finish.";
+    try {
+      const clip = await recordClip({ maxMs: 8000, silenceMs: 1100, startTimeoutMs: 8000 });
+      const fd = new FormData();
+      fd.append("name", name); fd.append("audio", clip, "voice.wav");
+      await api("/api/voice", { method: "POST", body: fd });
+      voiceCache.delete(name);
+      chime(true);
+      await refresh(name);
+      setStage("idle", "Voice banked");
+      why.textContent = `Saved. When Tink hears "${s.name.toLowerCase()}", it will play this recording.`;
+    } catch (err) {
+      setStage("error", "Not saved"); why.textContent = micError(err);
+    }
+    enrolling = false; button?.classList.remove("recording"); $("listen").disabled = realSounds().length < minSounds;
+  }
+  $("bankNow").addEventListener("click", (e) => bankVoice($("sname").value.trim(), e.currentTarget));
 
   // ---------- Room noise ----------
   $("roomTake").addEventListener("click", async () => {
@@ -568,11 +627,11 @@
     castPhrase(r.say);
     why.innerHTML = `Heard <b>${esc(r.name.toLowerCase())}</b>, marked urgent · <span class="conf">${pct(r.p)}</span> sure`;
     hideResult(); $("guide").hidden = true; $("alarmBox").hidden = false; $("listen").disabled = true;
-    lastSaid = r.say; lastLang = null; $("repeat").disabled = false;
+    lastSaid = r.say; lastLang = null; lastVoiceName = r.name; $("repeat").disabled = false;
     addLog(r.say, "Urgent", r.name); alarmEntry = log[log.length - 1];
     renderSounds(r.name);
     $("ack").focus();
-    const ring = async () => { if (!alarmOn) return; siren(); await wait(1300); if (alarmOn) await speak(r.say); if (alarmOn) alarmTimer = setTimeout(ring, 4000); };
+    const ring = async () => { if (!alarmOn) return; siren(); await wait(1300); if (alarmOn) await sayFor(r.name, r.say); if (alarmOn) alarmTimer = setTimeout(ring, 4000); };
     ring();
   }
   $("ack").addEventListener("click", () => {
@@ -588,7 +647,7 @@
   // ---------- Controls ----------
   $("listen").addEventListener("click", listen);
   $("loop").addEventListener("change", (e) => { if (e.target.checked) listen(); });
-  $("repeat").addEventListener("click", () => { chime(true); speak(lastSaid, lastLang); });
+  $("repeat").addEventListener("click", () => { chime(true); sayFor(lastVoiceName, lastSaid, lastLang); });
   $("mute").addEventListener("click", (e) => {
     const b = e.currentTarget;
     muted = !muted; b.setAttribute("aria-pressed", muted); b.querySelector("span").textContent = muted ? "Voice muted" : "Mute voice";
