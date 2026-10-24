@@ -11,7 +11,8 @@ ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy \
 WORKDIR /app
 
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+# --no-cache keeps uv's ~1 GB download cache out of the image
+RUN uv sync --frozen --no-dev --no-install-project --no-cache
 
 # Bake the model into the image so containers start without downloading.
 RUN python -c "from transformers import AutoFeatureExtractor, AutoModel; m='alkiskoudounas/voc2vec-hubert-ls-pt'; AutoFeatureExtractor.from_pretrained(m); AutoModel.from_pretrained(m)"
