@@ -7,3 +7,4 @@ __pycache__/
 data/
 # design review captures stay local
 .impeccable/review/
+.impeccable/questions/
