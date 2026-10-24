@@ -32,6 +32,8 @@ Tink can speak in a different language from the one the phrase was taught in, so
 
 The core is voc2vec (Koudounas et al., ICASSP 2025), a model pretrained on 125 hours of non-verbal human sounds: laughs, sighs, cries, vocalizations from minimally speaking people. The released checkpoints have no classifier on top, so we don't train anything. We turn each recording into one vector by averaging a hidden layer over time, average a sound's takes into one vector, and match new sounds by cosine similarity after subtracting the mean of all takes. That last step matters: without it, every sound looks about 0.9 similar to every other.
 
+Five recordings isn't much, so each take also becomes four variants: shifted about a semitone up and down, and with two levels of background noise. Then Tink tests itself after every recording. It holds out each take, along with its own variants so it can't recognise itself, and matches it against the rest. That self-test fits two numbers to this one person, how confident a match should sound and where "I didn't catch that" begins, and the screen shows the result: right on so many takes, and how often it was right when it said it was 90% sure.
+
 Similarity scores aren't probabilities, so we put a small Bayesian model on top. The likelihood is a softmax over the scores, with an extra "unknown" option sitting at the threshold. The prior is how often each sound has been confirmed at this time of day, which starts uniform and learns every time someone presses "Right." Optional face cues from the webcam (nod, shake, smile, frown, eyes closed), computed in the browser with MediaPipe, multiply in as extra evidence.
 
 The top meanings, their probabilities, the time, and the cue names go to Grok as a small JSON packet. Grok turns that into one natural sentence in the listener's language, or a question when Tink is unsure. Audio and video never leave the laptop, and the screen shows the exact packet that does. If Grok is unreachable, Tink says the taught phrase, so the demo can't stall on the network.
@@ -51,6 +53,8 @@ Two sounds named "Hum" and "hum!" were saved into the same folder and overwrote 
 It works with five recordings per sound and no training run.
 
 It is honest about uncertainty. The screen shows what Tink heard, how sure it is, and how sure it would have been from the sound alone, before time of day and face cues.
+
+Augmentation changed leave-one-out accuracy on our recordings from [[A]]% to [[B]]% (`uv run python risk_test.py --augment`).
 
 On recordings from our own team, voc2vec matched sounds correctly [[X]]% of the time in leave-one-out testing, against [[Y]]% for wav2vec2 and [[Z]]% for HuBERT on the same clips. (`uv run python risk_test.py --compare`)
 

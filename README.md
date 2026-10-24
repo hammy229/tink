@@ -48,12 +48,13 @@ webcam ──► face cues ─────────┘   (time-of-day prior)
 
 1. **Audio.** The browser records a clip, stops on its own when the sound ends, and sends a WAV. The backend resamples to 16 kHz mono and trims the silence.
 2. **voc2vec.** Turns the clip into one vector (mean of one hidden layer over time). The released checkpoints have no classifier head, so there is no training. Each sound's vector is the average of its takes, and the clip is scored against each by cosine similarity after subtracting the mean of all takes.
-3. **Bayes** (`tink/bayes.py`). `P(sound | clip, cues, time) ∝ P(clip | sound) · P(cues | sound) · P(sound | time)`.
+3. **Augmentation and self-calibration** (`tink/audio.py`, `tink/store.py`). Each take also yields 4 variants (about a semitone up and down, two noise levels), so 5 recordings cover more of how a voice drifts. After every change Tink tests itself: each original take is held out with its own variants and matched against the rest. That fits the softmax temperature (floored at 0.04 so a few easy takes can't make it certain) and the "didn't catch it" threshold to this person, and the Sounds panel shows the result.
+4. **Bayes** (`tink/bayes.py`). `P(sound | clip, cues, time) ∝ P(clip | sound) · P(cues | sound) · P(sound | time)`.
    - Audio likelihood: softmax of the scores. An "unknown" option sits at `TINK_THRESHOLD`, so weak matches become "I didn't catch that."
    - Time prior: Dirichlet-smoothed counts of confirmed uses per part of day. It learns every time someone presses **Right**.
    - Face cues: a sound taught with "smile" gets a boost when the camera sees a smile.
-4. **Webcam** (`web/cues.js`). MediaPipe Face Landmarker runs in the browser and reports nod, shake, smile, frown, or eyes closed. Only those words leave the browser, never video.
-5. **JSON packet → Grok** (`tink/llm.py`). The top candidates with probabilities, the time, recent phrases, and cue names. Grok words one short sentence, or asks an either/or question when the top two are close. If Grok fails or there is no key, Tink says the taught phrase. The UI shows the exact packet and offers "Say the taught phrase" whenever Grok rewords it.
+5. **Webcam** (`web/cues.js`). MediaPipe Face Landmarker runs in the browser and reports nod, shake, smile, frown, or eyes closed. Only those words leave the browser, never video.
+6. **JSON packet → Grok** (`tink/llm.py`). The top candidates with probabilities, the time, recent phrases, and cue names. Grok words one short sentence, or asks an either/or question when the top two are close. If Grok fails or there is no key, Tink says the taught phrase. The UI shows the exact packet and offers "Say the taught phrase" whenever Grok rewords it.
 
 ## Risk test
 
@@ -70,6 +71,7 @@ To check the paper's claim on your own recordings (voc2vec vs. general speech mo
 
 ```bash
 uv run python risk_test.py --compare
+uv run python risk_test.py --augment    # accuracy with and without augmented variants
 ```
 
 ## Tests
@@ -86,9 +88,10 @@ They use synthetic tones, so they need no recordings and never call Grok.
 |---|---|---|
 | `TINK_MODEL` | `alkiskoudounas/voc2vec-hubert-ls-pt` | Any voc2vec checkpoint |
 | `TINK_LAYER` | `-1` | Hidden layer to pool (0 to 12) |
-| `TINK_THRESHOLD` | `0.5` | Minimum centered cosine to count as a match |
+| `TINK_THRESHOLD` | `0.5` | "Didn't catch it" cutoff until calibration takes over |
 | `TINK_DATA` | `data` | Where takes, `sounds.json`, and `usage.json` live |
-| `TINK_TEMP` | `0.1` | Softmax temperature on audio scores (lower = more confident) |
+| `TINK_TEMP` | `0.1` | Softmax temperature until calibration takes over (lower = more confident) |
+| `TINK_AUGMENT` | `1` | Add 4 augmented variants per take (set `0` to turn off) |
 | `XAI_API_KEY` | unset | Turns on Grok wording |
 | `TINK_GROK_MODEL` | `grok-4.3` | xAI model id |
 

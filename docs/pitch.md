@@ -43,6 +43,7 @@ Judging: Sun 2:00 to 5:00 in WEL (table). Pitching: Sun 5:30 in GDC 2.216 (proje
 
 - **How accurate is it?** Give the measured leave-one-out number and say how many clips. Don't round up. Say plainly that we haven't tested with ALS patients yet and wouldn't claim clinical accuracy without that.
 - **Why not just use speech-to-text?** It's trained to find words. These sounds aren't words. voc2vec's paper shows general speech models do worse on vocalizations; our `--compare` test checks that on our voices.
+- **How do you know the percentages mean anything?** Tink tests itself after every recording: each take is held out and matched against the rest, which fits its confidence to this person. The Sounds panel shows the result, including how often it was right when it said 90%+.
 - **Why Bayesian?** Similarity scores aren't probabilities and can't say "none of these." The posterior can, and it gets better with each "Right."
 - **What about privacy?** Audio stays on the laptop. Face cues are computed in the browser and only words like "smile" are kept. Only text goes to Grok, and the screen shows it.
 - **What if Grok is down?** Tink says the taught phrase. It works fully offline except translation.
