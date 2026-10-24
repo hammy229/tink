@@ -215,6 +215,21 @@ form { display: grid; gap: 14px; }
 .cue.urgent { border-color: var(--alarm); color: var(--fg); }
 .err { color: var(--miss); font-size: 14.5px; min-height: 1.2em; margin: 0; }
 
+/* ---------- answer back ---------- */
+.reply-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+.reply-row input { min-height: 52px; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--control-line); background: var(--house); color: var(--fg); font: inherit; font-size: 18px; min-width: 0; }
+.reply-row input:focus { border-color: var(--light); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--light) 35%, transparent); }
+.reply-row input::placeholder { color: var(--muted); opacity: .8; }
+.reply-row .btn { min-height: 52px; }
+.quick { display: flex; gap: 8px; flex-wrap: wrap; }
+.small-select { min-height: 40px; font-size: 15px; }
+.small-select .lbl { color: var(--muted); }
+.small-select select { min-height: 38px; }
+.reply .scrim { --scrim: var(--paper); }
+.stamp.replied { border-color: var(--fg); }
+body.present .reply-panel { display: none; }
+@media (max-width: 560px) { .reply-row { grid-template-columns: 1fr; } }
+
 /* ---------- lower: the stamped log and the packet ---------- */
 .log { list-style: none; margin: 0; padding: 0; }
 .log li { display: grid; grid-template-columns: 70px 1fr auto; gap: 12px; padding: 12px 6px; border-top: 1px solid var(--line); align-items: center; }

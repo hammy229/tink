@@ -85,6 +85,27 @@
         <p class="note" id="camNote" hidden><i class="ph ph-lock-simple" aria-hidden="true"></i> Video stays in this browser. Tink keeps only cue names like "smile" or "nod".</p>
       </div>
     </section>
+    <section class="panel reply-panel" aria-labelledby="replyTitle">
+      <div class="head">
+        <h2 id="replyTitle">Answer back</h2>
+        <label class="select small-select" for="personLang"><span class="lbl">Their language</span>
+          <select id="personLang" aria-label="The person's language"></select>
+        </label>
+      </div>
+      <form id="replyForm" class="reply-row" novalidate>
+        <label class="sr" for="replyText">What do you want to say to them?</label>
+        <input id="replyText" autocomplete="off" maxlength="200" placeholder="I'm coming, two minutes.">
+        <button type="submit" class="btn" id="replySend"><i class="ph-fill ph-chat-circle-text" aria-hidden="true"></i><span>Say it</span></button>
+      </form>
+      <div class="quick" id="quickReplies" aria-label="Quick replies">
+        <button type="button" class="btn quiet small">I'm coming.</button>
+        <button type="button" class="btn quiet small">Yes.</button>
+        <button type="button" class="btn quiet small">Not yet. Wait a minute.</button>
+        <button type="button" class="btn quiet small">I understand.</button>
+        <button type="button" class="btn quiet small">I'm right here.</button>
+      </div>
+      <p class="err" id="replyErr" role="alert"></p>
+    </section>
     <div class="lower">
     <section class="panel" aria-labelledby="logTitle">
       <div class="head"><h2 id="logTitle">Heard today</h2><small>this session</small></div>

@@ -307,7 +307,7 @@
   function renderLog() {
     $("log").innerHTML = log.slice(-12).reverse().map((e) => `
       <li><time>${esc(e.t)}</time><span class="text${e.stamp === "Wrong" ? " struck" : ""}">${esc(e.text)}</span>
-      <span class="stamp${e.stamp === "Wrong" ? " wrong" : e.stamp === "Urgent" || e.stamp === "Answered" ? " urgent" : ""}" style="--t:${e.name ? tintOf(e.name) : "var(--control-line)"}">${e.stamp}</span></li>`).join("");
+      <span class="stamp${e.stamp === "Wrong" ? " wrong" : e.stamp === "Urgent" || e.stamp === "Answered" ? " urgent" : e.stamp === "Replied" ? " replied" : ""}" style="--t:${e.name ? tintOf(e.name) : "var(--control-line)"}">${e.stamp}</span></li>`).join("");
     $("logEmpty").hidden = log.length > 0;
   }
 
@@ -404,6 +404,43 @@
     enrollTakes = 0; drawTakes(); $("enroll").reset(); $("surgent").checked = false; $("sname").readOnly = false; $("done").hidden = true; $("err").textContent = "";
     takeLabel("Record take"); $("sname").focus();
   });
+
+  // ---------- Answer back ----------
+  // The caregiver types; Tink translates into the person's language (with Grok) and says it to them.
+  const personSel = $("personLang");
+  personSel.innerHTML = LANGS.map((l, i) => `<option value="${i}">${esc(l.label)}</option>`).join("");
+  try { const saved = localStorage.getItem("tink.personLang"); if (saved && LANGS[saved]) personSel.value = saved; } catch {}
+  personSel.addEventListener("change", () => { try { localStorage.setItem("tink.personLang", personSel.value); } catch {} });
+  const personLang = () => LANGS[personSel.value] || LANGS[0];
+
+  async function sendReply(text) {
+    text = text.trim();
+    if (!text) { $("replyErr").textContent = "Type what you want to say first."; return; }
+    if (busy || enrolling || alarmOn) { $("replyErr").textContent = "Wait until Tink finishes listening, then say it."; return; }
+    $("replyErr").textContent = "";
+    busy = true; $("replySend").disabled = true; $("listen").disabled = true;
+    setStage("reply", llmModel && personLang().name !== "English" ? `Translating into ${personLang().name}` : "Saying it to them");
+    try {
+      const r = await api("/api/reply", { method: "POST", body: new URLSearchParams({ text, to: personLang().name }) });
+      hideResult(); $("guide").hidden = true;
+      statusText.textContent = "To them";
+      phrase.textContent = r.say;
+      why.innerHTML = r.say !== r.typed
+        ? `You typed: <b>${esc(r.typed)}</b> · translated into ${esc(r.to)} by ${esc(llmModel || "Grok")}`
+        : personLang().name !== "English" && !llmModel ? "Said as typed. Translation needs an xAI key." : "From you";
+      if (r.packet) { $("packet").textContent = JSON.stringify(r.packet, null, 2); $("packetBox").hidden = false; }
+      lastSaid = r.say; lastLang = r.source === "grok" ? personLang().lang : null; $("repeat").disabled = false;
+      addLog(r.say, "Replied", null);
+      $("replyText").value = "";
+      await speak(r.say, lastLang);
+    } catch (e) {
+      $("replyErr").textContent = e.message; setStage("idle", "Ready");
+    }
+    busy = false; $("replySend").disabled = false; $("listen").disabled = realSounds().length < minSounds;
+    if ($("loop").checked) setTimeout(listen, 600);
+  }
+  $("replyForm").addEventListener("submit", (e) => { e.preventDefault(); sendReply($("replyText").value); });
+  $("quickReplies").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) sendReply(b.textContent); });
 
   // ---------- Room noise ----------
   $("roomTake").addEventListener("click", async () => {
