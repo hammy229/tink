@@ -66,14 +66,19 @@ function loop() {
 async function enable(videoEl, onLiveCues) {
   video = videoEl; onLive = onLiveCues;
   stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240, facingMode: "user" } });
-  video.srcObject = stream;
-  await video.play();
-  landmarker = landmarker || await FaceLandmarker.createFromOptions(await FilesetResolver.forVisionTasks(WASM), {
-    baseOptions: { modelAssetPath: MODEL, delegate: "GPU" },
-    runningMode: "VIDEO",
-    numFaces: 1,
-    outputFaceBlendshapes: true,
-  });
+  try {
+    video.srcObject = stream;
+    await video.play();
+    landmarker = landmarker || await FaceLandmarker.createFromOptions(await FilesetResolver.forVisionTasks(WASM), {
+      baseOptions: { modelAssetPath: MODEL, delegate: "GPU" },
+      runningMode: "VIDEO",
+      numFaces: 1,
+      outputFaceBlendshapes: true,
+    });
+  } catch (e) {
+    disable(); // never leave the camera on when the face model fails to load
+    throw new Error("The face model couldn't load. Check the internet connection, or leave the camera off.");
+  }
   running = true;
   loop();
 }

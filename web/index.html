@@ -4,21 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tink</title>
+<meta name="description" content="Tink learns the sounds one person makes and says what they mean, in any language.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
 <link rel="stylesheet" href="style.css">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="brand"><h1>Tink</h1><span>speaks for people who don't use words</span></div>
-    <div class="mode" id="mode">voc2vec-hubert-ls</div>
+    <div class="brand">
+      <h1>Tink</h1>
+      <span class="tagline">says what a sound means, in any language</span>
+    </div>
+    <div class="top-controls">
+      <label class="select" for="speakIn"><i class="ph ph-translate" aria-hidden="true"></i><span class="sr">Speak in</span>
+        <select id="speakIn" aria-label="Tink speaks in"></select>
+      </label>
+      <span class="mode" id="mode">voc2vec</span>
+      <button class="btn quiet icon-btn" id="present" aria-pressed="false" title="Present mode (P)"><i class="ph ph-corners-out" aria-hidden="true"></i><span>Present</span></button>
+    </div>
   </header>
 
   <main class="main">
-    <section class="stage idle" id="stage">
+    <div class="col">
+    <section class="stage idle" id="stage" aria-label="Tink">
       <canvas id="dust" aria-hidden="true"></canvas>
+
       <div class="stage-top">
         <div class="status"><span class="bars" id="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span id="statusText">Ready</span></div>
         <div class="cam" id="cam" hidden>
@@ -28,79 +41,94 @@
       </div>
 
       <div class="center" aria-live="polite">
-        <div class="orb" aria-hidden="true"></div>
-        <div class="phrase" id="phrase">Teach Tink a sound to begin.</div>
-        <div class="why" id="why">Use "Teach a new sound" on the right.</div>
+        <div class="orb" aria-hidden="true"><span class="orb-core"></span></div>
+        <div class="phrase" id="phrase">Teach Tink two sounds.</div>
+        <div class="why" id="why"></div>
+
+        <ol class="guide" id="guide">
+          <li><b>Teach two sounds</b><span id="guideCount">0 of 2 taught</span></li>
+          <li><b>Press Listen</b><span>and make one of them</span></li>
+          <li><b>Tink says it</b><span>out loud, in the language you pick</span></li>
+        </ol>
+
         <div class="taught" id="taught" hidden>
           <span>Taught phrase: <b id="taughtText"></b></span>
-          <button class="linkish" id="useTaught">Say the taught phrase</button>
+          <button class="linkish" id="useTaught">Say the taught phrase instead</button>
         </div>
-        <ol class="ranked" id="ranked" hidden></ol>
+        <ol class="ranked" id="ranked" hidden aria-label="How sure Tink is"></ol>
         <div class="feedback" id="feedback" hidden>
           <span id="feedbackMsg">Did Tink get it right?</span>
-          <button class="btn small" id="right">Right</button>
-          <button class="btn quiet small" id="wrong">Wrong</button>
+          <button class="btn small" id="right"><i class="ph ph-check" aria-hidden="true"></i>Right</button>
+          <button class="btn quiet small" id="wrong"><i class="ph ph-x" aria-hidden="true"></i>Wrong</button>
         </div>
-        <details class="packet" id="packetBox" hidden>
-          <summary>What the LLM saw (no audio, no video)</summary>
-          <pre id="packet"></pre>
-        </details>
       </div>
 
       <div class="pad">
         <div class="actions">
-          <button class="btn big" id="listen" disabled>Listen</button>
-          <button class="btn quiet" id="repeat" disabled>Say it again</button>
-          <button class="btn quiet" id="mute" aria-pressed="false">Mute voice</button>
+          <button class="btn listen" id="listen" disabled><i class="ph-fill ph-microphone" aria-hidden="true"></i><span>Listen</span></button>
+          <button class="btn quiet" id="repeat" disabled><i class="ph ph-speaker-high" aria-hidden="true"></i>Say it again</button>
+          <button class="btn quiet" id="mute" aria-pressed="false"><i class="ph ph-speaker-slash" aria-hidden="true"></i><span>Mute voice</span></button>
         </div>
         <div class="toggles">
           <label class="toggle"><input type="checkbox" id="loop"> Keep listening</label>
           <label class="toggle"><input type="checkbox" id="camera"> Use camera for face cues</label>
         </div>
-        <p class="hint" id="hint">Press space to listen. Tink stops on its own after the sound ends.</p>
-        <p class="note" id="camNote" hidden>The camera stays in this browser. Tink only keeps cue names like "smile" or "nod" to help tell sounds apart.</p>
+        <p class="hint" id="hint">Press space to listen. Tink stops by itself when the sound ends.</p>
+        <p class="note" id="camNote" hidden><i class="ph ph-lock-simple" aria-hidden="true"></i> Video stays in this browser. Tink keeps only cue names like "smile" or "nod".</p>
       </div>
     </section>
+    <div class="lower">
+    <section class="panel" aria-labelledby="logTitle">
+      <div class="head"><h2 id="logTitle">Heard today</h2><small>this session</small></div>
+      <ul class="log" id="log"></ul>
+      <p class="empty" id="logEmpty">Nothing heard yet.</p>
+    </section>
+    <section class="panel" aria-labelledby="leavesTitle">
+      <div class="head"><h2 id="leavesTitle">What leaves this laptop</h2><i class="ph ph-shield-check head-icon" aria-hidden="true"></i></div>
+      <p class="note" id="leavesNote">Audio and video never leave this laptop.</p>
+      <details class="packet" id="packetBox" hidden>
+        <summary>Last message to the LLM</summary>
+        <pre id="packet"></pre>
+      </details>
+    </section>
+  </div>
+    </div>
 
     <aside class="side">
-      <section class="panel">
-        <div class="head"><h2>Sounds Tink knows</h2><small id="count"></small></div>
+      <section class="panel" aria-labelledby="soundsTitle">
+        <div class="head"><h2 id="soundsTitle">Sounds Tink knows</h2><small id="count"></small></div>
         <ul class="sounds" id="sounds"></ul>
-        <p class="empty" id="soundsEmpty">No sounds yet. Teach one below.</p>
+        <p class="empty" id="soundsEmpty">Nothing yet. Teach the first sound below: a hum, a click, a sigh, anything the person can repeat.</p>
       </section>
 
-      <section class="panel">
-        <h2>Teach a new sound</h2>
+      <section class="panel" aria-labelledby="teachTitle">
+        <h2 id="teachTitle">Teach a sound</h2>
         <form id="enroll" novalidate>
           <div class="field">
             <label for="sname">What does the sound sound like?</label>
-            <input id="sname" autocomplete="off" placeholder="Example: low hum">
+            <input id="sname" autocomplete="off" maxlength="80" placeholder="Low hum">
           </div>
           <div class="field">
-            <label for="sphrase">What should Tink say?</label>
-            <input id="sphrase" autocomplete="off" placeholder="Example: I'm thirsty.">
+            <label for="sphrase">What does it mean?</label>
+            <input id="sphrase" autocomplete="off" maxlength="80" placeholder="I'm thirsty.">
+            <span class="help">Any language. Tink can say it in another one.</span>
           </div>
           <fieldset class="field cue-pick">
-            <legend>Does it usually come with any of these? (optional)</legend>
+            <legend>Does it usually come with any of these? <span class="optional">Optional</span></legend>
             <div class="cue-boxes" id="cueBoxes"></div>
           </fieldset>
-          <span class="help">Record the same sound 5 times. Tink learns from every take.</span>
           <div class="enroll-takes">
-            <button type="submit" class="btn" id="take">Record take</button>
+            <button type="submit" class="btn" id="take"><i class="ph-fill ph-record" aria-hidden="true"></i><span>Record take</span></button>
             <span class="takes" id="enrollDots" aria-live="polite"></span>
             <button type="button" class="btn quiet" id="done" hidden>Done</button>
           </div>
+          <span class="help">Record the same sound about 5 times.</span>
           <p class="err" id="err" role="alert"></p>
         </form>
       </section>
     </aside>
   </main>
 
-  <section class="panel">
-    <div class="head"><h2>Heard today</h2><small>this session</small></div>
-    <ul class="log" id="log"></ul>
-    <p class="empty" id="logEmpty">Nothing heard yet.</p>
-  </section>
 </div>
 <script src="app.js"></script>
 <script type="module" src="cues.js"></script>
