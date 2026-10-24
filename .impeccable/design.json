@@ -1,0 +1,577 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-24T18:51:12+00:00",
+  "title": "Design System: Tink",
+  "extensions": {
+    "colorMeta": {
+      "house": {
+        "role": "neutral",
+        "displayName": "Theatre House",
+        "canonical": "oklch(18.1% 0.009 59.0)",
+        "cssVar": "--house",
+        "tonalRamp": [
+          "oklch(15% 0.009 59.0)",
+          "oklch(26% 0.009 59.0)",
+          "oklch(38% 0.009 59.0)",
+          "oklch(49% 0.009 59.0)",
+          "oklch(61% 0.009 59.0)",
+          "oklch(72% 0.009 59.0)",
+          "oklch(84% 0.009 59.0)",
+          "oklch(95% 0.009 59.0)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Ember Surface",
+        "canonical": "oklch(22.3% 0.013 61.9)",
+        "cssVar": "--surface",
+        "tonalRamp": [
+          "oklch(15% 0.013 61.9)",
+          "oklch(26% 0.013 61.9)",
+          "oklch(38% 0.013 61.9)",
+          "oklch(49% 0.013 61.9)",
+          "oklch(61% 0.013 61.9)",
+          "oklch(72% 0.013 61.9)",
+          "oklch(84% 0.013 61.9)",
+          "oklch(95% 0.013 61.9)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "oklch(32.9% 0.020 60.7)",
+        "cssVar": "--line",
+        "tonalRamp": [
+          "oklch(15% 0.020 60.7)",
+          "oklch(26% 0.020 60.7)",
+          "oklch(38% 0.020 60.7)",
+          "oklch(49% 0.020 60.7)",
+          "oklch(61% 0.020 60.7)",
+          "oklch(72% 0.020 60.7)",
+          "oklch(84% 0.020 60.7)",
+          "oklch(95% 0.020 60.7)"
+        ]
+      },
+      "control-line": {
+        "role": "neutral",
+        "displayName": "Control Edge",
+        "canonical": "oklch(59.9% 0.031 70.7)",
+        "cssVar": "--control-line",
+        "tonalRamp": [
+          "oklch(15% 0.031 70.7)",
+          "oklch(26% 0.031 70.7)",
+          "oklch(38% 0.031 70.7)",
+          "oklch(49% 0.031 70.7)",
+          "oklch(61% 0.031 70.7)",
+          "oklch(72% 0.031 70.7)",
+          "oklch(84% 0.031 70.7)",
+          "oklch(95% 0.031 70.7)"
+        ]
+      },
+      "fg": {
+        "role": "neutral",
+        "displayName": "House Light",
+        "canonical": "oklch(94.6% 0.018 78.2)",
+        "cssVar": "--fg",
+        "tonalRamp": [
+          "oklch(15% 0.018 78.2)",
+          "oklch(26% 0.018 78.2)",
+          "oklch(38% 0.018 78.2)",
+          "oklch(49% 0.018 78.2)",
+          "oklch(61% 0.018 78.2)",
+          "oklch(72% 0.018 78.2)",
+          "oklch(84% 0.018 78.2)",
+          "oklch(95% 0.018 78.2)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Programme Grey",
+        "canonical": "oklch(75.7% 0.032 76.9)",
+        "cssVar": "--muted",
+        "tonalRamp": [
+          "oklch(15% 0.032 76.9)",
+          "oklch(26% 0.032 76.9)",
+          "oklch(38% 0.032 76.9)",
+          "oklch(49% 0.032 76.9)",
+          "oklch(61% 0.032 76.9)",
+          "oklch(72% 0.032 76.9)",
+          "oklch(84% 0.032 76.9)",
+          "oklch(95% 0.032 76.9)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Lit Paper",
+        "canonical": "oklch(94.1% 0.037 84.6)",
+        "cssVar": "--paper",
+        "tonalRamp": [
+          "oklch(15% 0.037 84.6)",
+          "oklch(26% 0.037 84.6)",
+          "oklch(38% 0.037 84.6)",
+          "oklch(49% 0.037 84.6)",
+          "oklch(61% 0.037 84.6)",
+          "oklch(72% 0.037 84.6)",
+          "oklch(84% 0.037 84.6)",
+          "oklch(95% 0.037 84.6)"
+        ]
+      },
+      "paper-dim": {
+        "role": "neutral",
+        "displayName": "Unlit Paper",
+        "canonical": "oklch(88.7% 0.046 84.6)",
+        "cssVar": "--paper-dim",
+        "tonalRamp": [
+          "oklch(15% 0.046 84.6)",
+          "oklch(26% 0.046 84.6)",
+          "oklch(38% 0.046 84.6)",
+          "oklch(49% 0.046 84.6)",
+          "oklch(61% 0.046 84.6)",
+          "oklch(72% 0.046 84.6)",
+          "oklch(84% 0.046 84.6)",
+          "oklch(95% 0.046 84.6)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Silhouette Ink",
+        "canonical": "oklch(18.1% 0.009 59.0)",
+        "cssVar": "--ink",
+        "tonalRamp": [
+          "oklch(15% 0.009 59.0)",
+          "oklch(26% 0.009 59.0)",
+          "oklch(38% 0.009 59.0)",
+          "oklch(49% 0.009 59.0)",
+          "oklch(61% 0.009 59.0)",
+          "oklch(72% 0.009 59.0)",
+          "oklch(84% 0.009 59.0)",
+          "oklch(95% 0.009 59.0)"
+        ]
+      },
+      "ash": {
+        "role": "neutral",
+        "displayName": "Ash",
+        "canonical": "oklch(67.3% 0.015 74.4)",
+        "cssVar": "--ash",
+        "tonalRamp": [
+          "oklch(15% 0.015 74.4)",
+          "oklch(26% 0.015 74.4)",
+          "oklch(38% 0.015 74.4)",
+          "oklch(49% 0.015 74.4)",
+          "oklch(61% 0.015 74.4)",
+          "oklch(72% 0.015 74.4)",
+          "oklch(84% 0.015 74.4)",
+          "oklch(95% 0.015 74.4)"
+        ]
+      },
+      "lamp": {
+        "role": "primary",
+        "displayName": "Lamp Amber",
+        "canonical": "oklch(81.3% 0.142 78.8)",
+        "cssVar": "--light",
+        "tonalRamp": [
+          "oklch(15% 0.142 78.8)",
+          "oklch(26% 0.142 78.8)",
+          "oklch(38% 0.142 78.8)",
+          "oklch(49% 0.142 78.8)",
+          "oklch(61% 0.142 78.8)",
+          "oklch(72% 0.142 78.8)",
+          "oklch(84% 0.142 78.8)",
+          "oklch(95% 0.142 78.8)"
+        ]
+      },
+      "miss": {
+        "role": "tertiary",
+        "displayName": "Miss Coral",
+        "canonical": "oklch(75.0% 0.120 30.9)",
+        "cssVar": "--miss",
+        "tonalRamp": [
+          "oklch(15% 0.120 30.9)",
+          "oklch(26% 0.120 30.9)",
+          "oklch(38% 0.120 30.9)",
+          "oklch(49% 0.120 30.9)",
+          "oklch(61% 0.120 30.9)",
+          "oklch(72% 0.120 30.9)",
+          "oklch(84% 0.120 30.9)",
+          "oklch(95% 0.120 30.9)"
+        ]
+      },
+      "tint-0": {
+        "role": "secondary",
+        "displayName": "Film Tint Amber",
+        "canonical": "oklch(81.3% 0.142 78.8)",
+        "cssVar": "--t0",
+        "tonalRamp": [
+          "oklch(15% 0.142 78.8)",
+          "oklch(26% 0.142 78.8)",
+          "oklch(38% 0.142 78.8)",
+          "oklch(49% 0.142 78.8)",
+          "oklch(61% 0.142 78.8)",
+          "oklch(72% 0.142 78.8)",
+          "oklch(84% 0.142 78.8)",
+          "oklch(95% 0.142 78.8)"
+        ]
+      },
+      "tint-1": {
+        "role": "secondary",
+        "displayName": "Film Tint Teal",
+        "canonical": "oklch(65.4% 0.096 188.0)",
+        "cssVar": "--t1",
+        "tonalRamp": [
+          "oklch(15% 0.096 188.0)",
+          "oklch(26% 0.096 188.0)",
+          "oklch(38% 0.096 188.0)",
+          "oklch(49% 0.096 188.0)",
+          "oklch(61% 0.096 188.0)",
+          "oklch(72% 0.096 188.0)",
+          "oklch(84% 0.096 188.0)",
+          "oklch(95% 0.096 188.0)"
+        ]
+      },
+      "tint-2": {
+        "role": "secondary",
+        "displayName": "Film Tint Rose",
+        "canonical": "oklch(68.2% 0.146 15.9)",
+        "cssVar": "--t2",
+        "tonalRamp": [
+          "oklch(15% 0.146 15.9)",
+          "oklch(26% 0.146 15.9)",
+          "oklch(38% 0.146 15.9)",
+          "oklch(49% 0.146 15.9)",
+          "oklch(61% 0.146 15.9)",
+          "oklch(72% 0.146 15.9)",
+          "oklch(84% 0.146 15.9)",
+          "oklch(95% 0.146 15.9)"
+        ]
+      },
+      "tint-3": {
+        "role": "secondary",
+        "displayName": "Film Tint Violet",
+        "canonical": "oklch(68.8% 0.115 299.3)",
+        "cssVar": "--t3",
+        "tonalRamp": [
+          "oklch(15% 0.115 299.3)",
+          "oklch(26% 0.115 299.3)",
+          "oklch(38% 0.115 299.3)",
+          "oklch(49% 0.115 299.3)",
+          "oklch(61% 0.115 299.3)",
+          "oklch(72% 0.115 299.3)",
+          "oklch(84% 0.115 299.3)",
+          "oklch(95% 0.115 299.3)"
+        ]
+      },
+      "tint-4": {
+        "role": "secondary",
+        "displayName": "Film Tint Leaf",
+        "canonical": "oklch(76.3% 0.142 130.4)",
+        "cssVar": "--t4",
+        "tonalRamp": [
+          "oklch(15% 0.142 130.4)",
+          "oklch(26% 0.142 130.4)",
+          "oklch(38% 0.142 130.4)",
+          "oklch(49% 0.142 130.4)",
+          "oklch(61% 0.142 130.4)",
+          "oklch(72% 0.142 130.4)",
+          "oklch(84% 0.142 130.4)",
+          "oklch(95% 0.142 130.4)"
+        ]
+      },
+      "tint-5": {
+        "role": "secondary",
+        "displayName": "Film Tint Sky",
+        "canonical": "oklch(71.7% 0.105 240.5)",
+        "cssVar": "--t5",
+        "tonalRamp": [
+          "oklch(15% 0.105 240.5)",
+          "oklch(26% 0.105 240.5)",
+          "oklch(38% 0.105 240.5)",
+          "oklch(49% 0.105 240.5)",
+          "oklch(61% 0.105 240.5)",
+          "oklch(72% 0.105 240.5)",
+          "oklch(84% 0.105 240.5)",
+          "oklch(95% 0.105 240.5)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Phrase",
+        "purpose": "What Tink says, in silhouette ink on the screen. Max 17ch, balanced."
+      },
+      "display-present": {
+        "displayName": "Phrase, present mode",
+        "purpose": "The phrase scaled for a projector."
+      },
+      "headline": {
+        "displayName": "Wordmark",
+        "purpose": "The Tink wordmark in the top bar; 34px on phones."
+      },
+      "numeral": {
+        "displayName": "Step numeral",
+        "purpose": "First-run guide step numbers."
+      },
+      "title": {
+        "displayName": "Panel title",
+        "purpose": "Panel headings in the house."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Base text in the house."
+      },
+      "body-screen": {
+        "displayName": "Why line",
+        "purpose": "Explanation under the phrase, ink at 82%, 54ch."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, legends, screen status."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Hints, help, notes, chips."
+      },
+      "stamp": {
+        "displayName": "Stamp",
+        "purpose": "Log stamps, rotated -2deg."
+      },
+      "mono": {
+        "displayName": "Proof mono",
+        "purpose": "Probabilities, times, confidence, the LLM packet; tabular figures."
+      }
+    },
+    "shadows": [
+      {
+        "name": "screen-hang",
+        "value": "0 30px 60px -30px rgba(0,0,0,.7), inset 0 0 0 1px rgba(21,17,14,.25)",
+        "purpose": "The only drop shadow: the backlit screen hanging in the house, with an inked inner edge."
+      },
+      {
+        "name": "field-focus",
+        "value": "0 0 0 3px color-mix(in srgb, var(--light) 35%, transparent)",
+        "purpose": "Input focus glow in the house."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(.16, 1, .3, 1)",
+        "purpose": "Single easing for every transition and keyframe."
+      },
+      {
+        "name": "screen-tint",
+        "value": "background-color .7s",
+        "purpose": "Screen changing to the heard sound's tint."
+      },
+      {
+        "name": "dim-house",
+        "value": "opacity .4s to .38",
+        "purpose": "Everything outside the screen steps back while Tink speaks."
+      },
+      {
+        "name": "cast",
+        "value": "0.55s, blur(6px) scale(1.04) to focus",
+        "purpose": "The phrase arriving on the screen when a sound is heard."
+      },
+      {
+        "name": "grow",
+        "value": "0.6s scaleX(0) to 1 from the left",
+        "purpose": "Ranking bars filling."
+      },
+      {
+        "name": "ring",
+        "value": "1.4s infinite, scale .96 to 1.12, opacity .7 to 0",
+        "purpose": "Listen button pulse while listening."
+      },
+      {
+        "name": "press",
+        "value": ".15s translateY(1px) scale(.98)",
+        "purpose": "Button press."
+      },
+      {
+        "name": "level-bars",
+        "value": ".08s linear scaleY from var(--lvl)",
+        "purpose": "Status bars following the mic level."
+      },
+      {
+        "name": "lamp",
+        "value": "requestAnimationFrame radial gradient; glow eases at 0.18 per frame, bloom decays at 0.965",
+        "purpose": "The live light behind the paper; drawn once under reduced motion."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "all animation and transition none",
+        "purpose": "prefers-reduced-motion: reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone",
+        "value": "560px"
+      },
+      {
+        "name": "lower-stack",
+        "value": "700px"
+      },
+      {
+        "name": "main-stack",
+        "value": "980px"
+      },
+      {
+        "name": "container",
+        "value": "1340px"
+      }
+    ],
+    "modes": [
+      {
+        "name": "present",
+        "trigger": "key P / Present toggle",
+        "purpose": "Screen fills the projector; side, lower, tagline, model chip, hints, toggles, notes hidden."
+      },
+      {
+        "name": "increase-contrast",
+        "trigger": "prefers-contrast: more",
+        "purpose": "muted becomes fg; line becomes control-line."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Lamp-filled pill for the main action in the house (Record take, Right).",
+      "html": "<button class=\"ds-btn\">Record take</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border:0;border-radius:999px;padding:11px 22px;font:700 17px/1.2 'Atkinson Hyperlegible','Segoe UI',system-ui,sans-serif;background:var(--light,#f3b648);color:var(--ink,#15110e);cursor:pointer;transition:transform .15s cubic-bezier(.16,1,.3,1)}.ds-btn:active{transform:translateY(1px) scale(.98)}.ds-btn:focus-visible{outline:3px solid var(--light,#f3b648);outline-offset:3px}"
+    },
+    {
+      "name": "Listen Button",
+      "kind": "button",
+      "refersTo": "button-listen",
+      "description": "The 64px Listen pill; a lamp ring pulses outward while listening.",
+      "html": "<button class=\"ds-listen is-listening\">Listen</button>",
+      "css": ".ds-listen{position:relative;min-height:64px;padding:14px 38px;border:0;border-radius:999px;font:700 20px/1.2 'Atkinson Hyperlegible',system-ui,sans-serif;background:var(--light,#f3b648);color:var(--ink,#15110e);cursor:pointer}.ds-listen:active{transform:translateY(1px) scale(.98)}.ds-listen:focus-visible{outline:3px solid var(--light,#f3b648);outline-offset:3px}.ds-listen.is-listening::after{content:'';position:absolute;inset:-6px;border-radius:inherit;border:2px solid var(--light,#f3b648);animation:ds-ring 1.4s cubic-bezier(.16,1,.3,1) infinite}@keyframes ds-ring{from{transform:scale(.96);opacity:.7}to{transform:scale(1.12);opacity:0}}@media (prefers-reduced-motion:reduce){.ds-listen::after{animation:none}}"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Transparent pill with a control edge for secondary actions in the house; lamp edge on hover, lamp wash when pressed.",
+      "html": "<button class=\"ds-quiet\" aria-pressed=\"false\">Say it again</button>",
+      "css": ".ds-quiet{min-height:48px;padding:11px 22px;border-radius:999px;border:1px solid var(--control-line,#8c7d6c);background:transparent;color:var(--fg,#f4ece0);font:700 17px/1.2 'Atkinson Hyperlegible',system-ui,sans-serif;cursor:pointer;transition:border-color .2s}.ds-quiet:hover{border-color:var(--light,#f3b648)}.ds-quiet[aria-pressed=true]{border-color:var(--light,#f3b648);background:color-mix(in srgb,var(--light,#f3b648) 14%,transparent)}.ds-quiet:focus-visible{outline:3px solid var(--light,#f3b648);outline-offset:3px}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "48px field on house ground with a control edge; lamp edge and glow on focus.",
+      "html": "<label class=\"ds-field\"><span>What does it mean?</span><input placeholder=\"I'm thirsty.\"></label>",
+      "css": ".ds-field{display:grid;gap:6px;font:400 17px/1.55 'Atkinson Hyperlegible',system-ui,sans-serif;color:var(--fg,#f4ece0);background:var(--house,#15110e);padding:16px}.ds-field span{font-weight:700;font-size:15px}.ds-field input{min-height:48px;padding:11px 14px;border-radius:12px;border:1px solid var(--control-line,#8c7d6c);background:var(--house,#15110e);color:var(--fg,#f4ece0);font:inherit}.ds-field input::placeholder{color:var(--muted,#bcae9a)}.ds-field input:focus{outline:none;border-color:var(--light,#f3b648);box-shadow:0 0 0 3px color-mix(in srgb,var(--light,#f3b648) 35%,transparent)}"
+    },
+    {
+      "name": "Cue Chip",
+      "kind": "chip",
+      "refersTo": "chip-cue",
+      "description": "Selectable pill for face cues and yes/no role; lamp edge and wash when checked.",
+      "html": "<div class=\"ds-chips\"><label class=\"ds-chip\"><input type=\"checkbox\" checked> smile</label><label class=\"ds-chip\"><input type=\"checkbox\"> nod</label></div>",
+      "css": ".ds-chips{display:flex;gap:6px;background:var(--house,#15110e);padding:12px}.ds-chip{display:flex;gap:6px;align-items:center;min-height:40px;padding:6px 13px;border:1px solid var(--control-line,#8c7d6c);border-radius:999px;font:400 14.5px 'Atkinson Hyperlegible',system-ui,sans-serif;color:var(--fg,#f4ece0);cursor:pointer}.ds-chip input{width:18px;height:18px;margin:0;accent-color:var(--light,#f3b648)}.ds-chip:has(input:checked){border-color:var(--light,#f3b648);background:color-mix(in srgb,var(--light,#f3b648) 14%,transparent)}.ds-chip:focus-within{outline:3px solid var(--light,#f3b648);outline-offset:2px}"
+    },
+    {
+      "name": "Top Bar",
+      "kind": "nav",
+      "refersTo": "select-pill",
+      "description": "Wordmark and tagline left; language select pill, model chip, Present toggle right; hairline rule below.",
+      "html": "<header class=\"ds-top\"><div class=\"ds-brand\"><b>Tink</b><span>says what a sound means, in any language</span></div><div class=\"ds-ctl\"><span class=\"ds-sel\">English</span><span class=\"ds-mode\">voc2vec</span></div></header>",
+      "css": ".ds-top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;min-height:64px;padding:12px 22px 14px;border-bottom:1px solid var(--line,#3d332b);background:var(--house,#15110e);color:var(--fg,#f4ece0);font:400 17px 'Atkinson Hyperlegible',system-ui,sans-serif}.ds-brand{display:flex;align-items:baseline;gap:14px}.ds-brand b{font:400 40px/1 Gloock,'Bodoni 72',Georgia,serif;letter-spacing:-.01em}.ds-brand span{color:var(--muted,#bcae9a)}.ds-ctl{display:flex;gap:10px;align-items:center}.ds-sel{display:flex;align-items:center;min-height:44px;padding:0 16px;border:1px solid var(--control-line,#8c7d6c);border-radius:999px}.ds-mode{font-size:13.5px;color:var(--muted,#bcae9a);border:1px solid var(--line,#3d332b);border-radius:999px;padding:7px 12px}"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Transparent hairline frame in the house; never filled.",
+      "html": "<section class=\"ds-panel\"><div class=\"ds-head\"><h2>Sounds Tink knows</h2><small>2</small></div><p>Nothing yet. Teach the first sound below.</p></section>",
+      "css": ".ds-panel{display:grid;gap:14px;padding:22px;border:1px solid var(--line,#3d332b);border-radius:16px;background:transparent;color:var(--fg,#f4ece0);font:400 17px/1.55 'Atkinson Hyperlegible',system-ui,sans-serif}.ds-head{display:flex;justify-content:space-between;align-items:baseline}.ds-head h2{margin:0;font-size:19px;font-weight:700}.ds-head small,.ds-panel p{color:var(--muted,#bcae9a);font-size:14px;margin:0}"
+    },
+    {
+      "name": "The Screen",
+      "kind": "custom",
+      "refersTo": "scrim",
+      "description": "The backlit scrim in its heard state: tinted paper, ink phrase, ranking, cut-paper skyline at the foot.",
+      "html": "<div class=\"ds-scrim\" style=\"--scrim:#3aa39b\"><div class=\"ds-status\">Heard you</div><div class=\"ds-phrase\">I'm thirsty.</div><ol class=\"ds-rank\"><li class=\"lead\"><i></i>Low hum<span>0.82</span><b></b></li><li style=\"--t:#e46f7a\"><i></i>Click<span>0.11</span><b></b></li></ol><svg class=\"ds-sky\" viewBox=\"0 0 1200 120\" preserveAspectRatio=\"xMidYMax slice\"><path d=\"M0 120V92h40V80h30v15h40V70h8v-8h6v8h26v18h50V76h30V66h6v10h24v14h50V72h30V60l15-10 15 10v12h30v22h50V84h50V70h6V60h6v10h28v16h50v-8h50v14h50V74h30V64h6v10h34v14h40v-8h40V60h18V30l10-8 12-16 12 16 10 8v30h18v22h40V70h30V58l20-14 20 14v12h30v20h40V78h30V68h6v10h24v14h40v28Z\"/></svg></div>",
+      "css": ".ds-scrim{position:relative;overflow:hidden;display:grid;gap:12px;min-height:340px;padding:22px 26px 96px;border-radius:22px;background:var(--scrim,#e8d8b8);color:var(--ink,#15110e);box-shadow:0 30px 60px -30px rgba(0,0,0,.7),inset 0 0 0 1px rgba(21,17,14,.25);font:400 16px 'Atkinson Hyperlegible',system-ui,sans-serif;transition:background-color .7s cubic-bezier(.16,1,.3,1)}.ds-status{font-weight:700;font-size:15px}.ds-phrase{justify-self:center;text-align:center;font:400 clamp(40px,5.2vw,68px)/1.06 Gloock,'Bodoni 72',Georgia,serif;letter-spacing:-.012em}.ds-rank{list-style:none;margin:0 auto;padding:0;display:grid;gap:9px;width:min(460px,100%)}.ds-rank li{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;font-size:15.5px;--t:#3aa39b}.ds-rank i{width:14px;height:14px;border-radius:4px;background:var(--t);border:2px solid var(--ink,#15110e)}.ds-rank span{font:13.5px 'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}.ds-rank b{grid-column:1/-1;height:8px;border-radius:4px;background:var(--t);box-shadow:inset 0 0 0 1.5px var(--ink,#15110e)}.ds-rank li.lead i,.ds-rank li.lead b{background:var(--ink,#15110e)}.ds-sky{position:absolute;left:0;right:0;bottom:-1px;width:100%;height:88px;fill:var(--ink,#15110e)}"
+    },
+    {
+      "name": "Log Stamp",
+      "kind": "custom",
+      "refersTo": "stamp",
+      "description": "Stamped log row: mono time, text, tint-edged stamp rotated -2deg; Wrong is coral and struck.",
+      "html": "<ul class=\"ds-log\"><li style=\"--t:#3aa39b\"><time>14:02</time><span>I'm thirsty.</span><em>Said</em></li><li class=\"wrong\"><time>14:05</time><span>Hello.</span><em>Wrong</em></li></ul>",
+      "css": ".ds-log{list-style:none;margin:0;padding:8px 16px;background:var(--house,#15110e);color:var(--fg,#f4ece0);font:400 17px 'Atkinson Hyperlegible',system-ui,sans-serif}.ds-log li{display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:center;padding:12px 6px;border-top:1px solid var(--line,#3d332b)}.ds-log li:first-child{border-top:0}.ds-log time{font:13px 'JetBrains Mono',ui-monospace,monospace;color:var(--muted,#bcae9a)}.ds-log em{font-style:normal;font-size:12.5px;font-weight:700;letter-spacing:.04em;padding:2px 9px;border-radius:6px;border:1.5px solid var(--t,#8c7d6c);transform:rotate(-2deg)}.ds-log li.wrong span{text-decoration:line-through;text-decoration-thickness:2px;color:var(--muted,#bcae9a)}.ds-log li.wrong em{border-color:var(--miss,#f0907f);color:var(--miss,#f0907f)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Silhouette Theatre",
+    "overview": "Tink is a cut-paper shadow play in the manner of Lotte Reiniger. The page is a dark, warm theatre house, and in it hangs one backlit paper screen. The person's sound is the lamp behind that screen: a soft hotspot, drawn every frame from the microphone level, swells with the voice and blooms when Tink understands. What the sound means is the shadow it casts: the phrase appears on the paper in black silhouette type, above a cut-paper London skyline that runs along the screen's foot.\n\nEverything that is operated lives in the house around the screen and stays quiet: hairline frames, transparent panels, warm off-white text. All emphasis is spent on the screen. Six film tints, one per taught sound, are the only saturated colour in the system, and each tint follows its sound everywhere it appears: its list swatch, its ranking bar, its log stamp, and the whole screen when that sound is heard. While Tink speaks, everything outside the screen dims to 38% so the room watches the shadow. Density is moderate and calm; targets are large; the screen is built to be read across a room in present mode.\n\nThe world refuses the category default of a dark dashboard with a glowing accent orb and a result card. The result is not a card; it is the screen itself changing colour.",
+    "keyCharacteristics": [
+      "One lit surface (the scrim) on a theatre-black house; nothing else is filled.",
+      "Silhouette ink (the house black) is the only text colour on the screen.",
+      "One film tint per taught sound, assigned by teaching order, carried across every view of that sound.",
+      "Live, procedural light behind the paper, never a static gradient.",
+      "Hairline structure in the house; depth only on the screen.",
+      "A display serif for what is said, a hyperlegible sans for everything operated."
+    ],
+    "rules": [
+      {
+        "name": "The One Screen Rule",
+        "body": "Only the scrim is filled. Panels, top bar, and controls in the house are transparent with hairline edges; if a new surface wants a fill, it belongs on the screen or it does not get one.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tint Follows the Sound Rule",
+        "body": "A film tint is owned by a sound, never by a component or a state. Every place a sound appears carries its tint; nothing else may use a tint.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ink Only Rule",
+        "body": "On the paper, text and marks are silhouette ink. Colour on the screen comes from the paper itself changing, not from coloured text.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Voices Rule",
+        "body": "Gloock is for what Tink says and the wordmark only; it never labels a control. Atkinson Hyperlegible is for everything a hand operates.",
+        "section": "typography"
+      },
+      {
+        "name": "The Numbers Are Proof Rule",
+        "body": "Any number a viewer might compare (probabilities, times, confidence, the packet) is set in mono with tabular figures.",
+        "section": "typography"
+      },
+      {
+        "name": "The Dim the House Rule",
+        "body": "While Tink speaks, the top bar, side, lower row, and control pad fade to 38% opacity over 0.4s. The screen never dims.",
+        "section": "layout"
+      },
+      {
+        "name": "The Light Not Shadow Rule",
+        "body": "The screen gains depth from the live lamp behind it, never from layered cards or stacked shadows. One drop shadow exists, and it belongs to the screen.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** give every new taught-sound view its sound's film tint, assigned by teaching order from the six tints.",
+      "**Do** keep the screen the only filled surface; build house panels as transparent frames with a 1px hairline and 16px corners.",
+      "**Do** set every mark on the screen in silhouette ink, including buttons, which invert to ink fill with paper text.",
+      "**Do** keep operable targets at 48px (64px for Listen; 40px only for small and icon controls) and edge them with the control edge so they hold 3:1 in the house.",
+      "**Do** set compared numbers in mono with tabular figures.",
+      "**Do** honor reduced motion by removing every animation and transition and drawing the screen light once.",
+      "**Do** raise secondary text to full strength and hairlines to control strength under increased contrast."
+    ],
+    "donts": [
+      "**Don't** use a film tint for a button, a state, or decoration; tints belong to sounds.",
+      "**Don't** put the result in a card; the screen changing colour is the result.",
+      "**Don't** add drop shadows to panels or controls; the screen hang is the only one.",
+      "**Don't** set controls or labels in Gloock, or the phrase in the sans.",
+      "**Don't** replace the live lamp behind the screen with a static gradient or a glowing orb.",
+      "**Don't** remove a wrong turn from the log; strike it and stamp it Wrong."
+    ]
+  }
+}
