@@ -15,7 +15,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.staticfiles import StaticFiles
 
 from . import audio, bayes, llm
-from .store import MAX_TEXT, MIN_SOUNDS, ROLES, THRESHOLD, Store
+from .store import MAX_TEXT, MIN_SOUNDS, ROLES, Store
 
 app = FastAPI(title="Tink")
 store = Store()  # loads the model and every take at startup
@@ -58,7 +58,8 @@ def _fallback(ranked: list[dict], phrase: dict[str, str]) -> dict:
 async def sounds():
     return {
         "sounds": store.all(),
-        "threshold": THRESHOLD,
+        "threshold": store.threshold,
+        "calibration": store.calib,
         "min_sounds": MIN_SOUNDS,
         "cues": bayes.CUES,
         "llm": {"on": bool(llm.KEY), "model": llm.MODEL},
@@ -98,7 +99,8 @@ async def recognize(
     if not scores:
         raise HTTPException(409, f"Teach Tink at least {MIN_SOUNDS} sounds first, so it can tell them apart.")
     now = datetime.now()
-    post = bayes.posterior(scores, THRESHOLD, store.usage, store.cues(), _cues(cues), now.hour)
+    post = bayes.posterior(scores, store.threshold, store.usage, store.cues(), _cues(cues), now.hour,
+                           temp=store.temp or bayes.TEMP)
     ranked = post["ranked"]
 
     packet = {

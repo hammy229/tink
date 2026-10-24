@@ -6,6 +6,13 @@ Layout:
     data/usage.json              {"Low hum": {"afternoon": 3}}   confirmed uses per part of day (Bayesian prior)
     data/takes/<dir>/<id>.wav    16 kHz mono clips; <dir> is unique per sound so similar names never collide
 Embeddings are recomputed from the clips at startup, so changing TINK_LAYER needs no migration.
+
+Each take is stored as a small matrix: row 0 is the take itself, the other rows are its augmented variants
+(audio.augment). A sound's centroid averages every row of every take.
+
+After every change, calibrate() runs a self-test: each original take is held out (with its own variants,
+so it can't recognise itself) and matched against the rest. That fits the softmax temperature and the
+"didn't catch it" threshold to this person's sounds, and reports how often Tink was right.
 """
 import json
 import os
@@ -21,7 +28,9 @@ from .bayes import CUES, part_of_day
 from .embed import embed
 
 DATA = Path(os.environ.get("TINK_DATA", "data"))
-THRESHOLD = float(os.environ.get("TINK_THRESHOLD", "0.5"))  # on centered cosine; calibrate with risk_test.py
+THRESHOLD = float(os.environ.get("TINK_THRESHOLD", "0.5"))  # fallback until calibration has enough takes
+AUGMENT = os.environ.get("TINK_AUGMENT", "1") != "0"
+TEMPS = np.geomspace(0.04, 1.0, 50)  # floor: a handful of easy takes must not make Tink certain
 MIN_SOUNDS = 2  # centering needs two sounds; with one, every clip looks like a match
 MAX_TEXT = 80
 ROLES = ("yes", "no", "background")  # yes/no answer Tink's questions; background is the room itself
@@ -44,12 +53,19 @@ class Store:
         self.root = root
         self.sounds: dict[str, dict] = _read(root / "sounds.json")
         self.usage: dict[str, dict[str, int]] = _read(root / "usage.json")
-        self.vecs: dict[str, list[np.ndarray]] = {}
+        self.vecs: dict[str, list[np.ndarray]] = {}  # per take: (1 + variants, dim)
         for name, s in self.sounds.items():
             s["takes"] = [t for t in s["takes"] if (root / "takes" / t).exists()]  # survive a lost file
-            self.vecs[name] = [embed(audio.load(root / "takes" / t)) for t in s["takes"]]
+            self.vecs[name] = [self._take_vecs(audio.load(root / "takes" / t)) for t in s["takes"]]
         if not self.vecs:
             embed(np.zeros(audio.SR // 2, np.float32))  # load the model now, not on the first request
+        self.calib: dict = {}
+        self.calibrate()
+
+    @staticmethod
+    def _take_vecs(wav: np.ndarray) -> np.ndarray:
+        variants = audio.augment(wav) if AUGMENT else []
+        return np.stack([embed(w) for w in [wav, *variants]])
 
     def _save(self):
         self.root.mkdir(parents=True, exist_ok=True)
@@ -77,7 +93,7 @@ class Store:
 
     def add_take(self, name: str, phrase: str, wav: np.ndarray, cues: list[str] | None = None, role: str | None = None,
                  urgent: bool | None = None) -> int:
-        vec = embed(wav)  # before touching state, so a model failure leaves nothing half-written
+        vec = self._take_vecs(wav)  # before touching state, so a model failure leaves nothing half-written
         s = self.sounds.setdefault(name, {"phrase": phrase, "cues": [], "takes": []})
         s.setdefault("dir", f"{slug(name)[:40]}-{uuid.uuid4().hex[:6]}")
         s["phrase"] = phrase
@@ -99,6 +115,7 @@ class Store:
         s["takes"].append(rel)
         self.vecs.setdefault(name, []).append(vec)
         self._save()
+        self.calibrate()
         return len(s["takes"])
 
     def confirm(self, name: str, hour: int) -> bool:
@@ -118,6 +135,7 @@ class Store:
         self.vecs.pop(name, None)
         self.usage.pop(name, None)
         self._save()
+        self.calibrate()
         return True
 
     def scores(self, wav: np.ndarray) -> dict[str, float]:
@@ -127,8 +145,56 @@ class Store:
             return {}
         # Raw voc2vec means are all very similar, so cosine on raw vectors bunches near 1.
         # Subtracting the mean of all takes removes that shared component and spreads them out.
-        everything = np.concatenate([np.stack(self.vecs[n]) for n in names])
+        everything = np.concatenate([np.concatenate(self.vecs[n]) for n in names])
         mu = everything.mean(axis=0)
-        cents = _unit(np.stack([np.stack(self.vecs[n]).mean(axis=0) - mu for n in names]))
+        cents = _unit(np.stack([np.concatenate(self.vecs[n]).mean(axis=0) - mu for n in names]))
         s = cents @ _unit(embed(wav) - mu)
         return {n: round(float(v), 3) for n, v in zip(names, s)}
+
+    # ---------- calibration ----------
+    @property
+    def temp(self) -> float | None:
+        return self.calib.get("temp")
+
+    @property
+    def threshold(self) -> float:
+        return self.calib.get("threshold", THRESHOLD)
+
+    def calibrate(self) -> dict:
+        """Leave-one-take-out self-test; fits temperature and threshold when there is enough data."""
+        names = [n for n, v in self.vecs.items() if v]
+        rows, labels = [], []
+        for si, n in enumerate(names):
+            if len(self.vecs[n]) < 2:
+                continue
+            for ti, held in enumerate(self.vecs[n]):
+                kept = {m: [v for j, v in enumerate(self.vecs[m]) if not (m == n and j == ti)] for m in names}
+                mu = np.concatenate([np.concatenate(v) for v in kept.values()]).mean(axis=0)
+                cents = _unit(np.stack([np.concatenate(kept[m]).mean(axis=0) - mu for m in names]))
+                rows.append(cents @ _unit(held[0] - mu))
+                labels.append(si)
+        if len(rows) < 4 or len({*labels}) < 2:
+            self.calib = {"n": len(rows), "ready": False}
+            return self.calib
+        S, y = np.stack(rows), np.array(labels)
+        right = S[np.arange(len(y)), y]
+        wrong = np.where(np.eye(len(names), dtype=bool)[y], -np.inf, S).max(axis=1)
+        correct = S.argmax(axis=1) == y
+
+        def nll(t):
+            z = S / t
+            z = z - z.max(axis=1, keepdims=True)
+            return float(-(z[np.arange(len(y)), y] - np.log(np.exp(z).sum(axis=1))).mean())
+
+        temp = float(min(TEMPS, key=nll))
+        p = np.exp((S - S.max(axis=1, keepdims=True)) / temp)
+        conf = (p / p.sum(axis=1, keepdims=True)).max(axis=1)
+        sure = conf >= 0.9
+        threshold = float(np.clip((np.median(right) + np.median(wrong)) / 2, 0.1, 0.9))
+        self.calib = {
+            "ready": True, "n": int(len(y)), "right": int(correct.sum()),
+            "accuracy": round(float(correct.mean()), 3),
+            "sure_n": int(sure.sum()), "sure_right": int((correct & sure).sum()),
+            "temp": round(temp, 4), "threshold": round(threshold, 3),
+        }
+        return self.calib

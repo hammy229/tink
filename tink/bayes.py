@@ -30,9 +30,9 @@ def _normalize(logs: dict[str, float]) -> dict[str, float]:
     return {k: v / z for k, v in exp.items()}
 
 
-def posterior(scores, threshold, usage, sound_cues, cues_seen, hour) -> dict:
+def posterior(scores, threshold, usage, sound_cues, cues_seen, hour, temp: float = TEMP) -> dict:
     names = list(scores)
-    audio = {n: scores[n] / TEMP for n in names} | {UNKNOWN: threshold / TEMP}
+    audio = {n: scores[n] / temp for n in names} | {UNKNOWN: threshold / temp}
 
     bucket = part_of_day(hour)
     counts = {n: usage.get(n, {}).get(bucket, 0) for n in names} | {UNKNOWN: 0}

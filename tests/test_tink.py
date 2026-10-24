@@ -210,3 +210,25 @@ def test_reply_uses_grok_translation_when_available(client, monkeypatch):
     monkeypatch.setattr(app_module.llm, "translate", fake_translate)
     r = c.post("/api/reply", data={"text": "I'm coming, two minutes.", "to": "Spanish"}).json()
     assert r["say"] == "Ya voy, dos minutos." and r["source"] == "grok" and r["typed"] == "I'm coming, two minutes."
+
+
+def test_augment_makes_four_variants():
+    from tink import audio
+    wav = audio.load(tone(200))
+    variants = audio.augment(wav)
+    assert len(variants) == 4 and all(v.dtype == np.float32 and len(v) > 0 for v in variants)
+    assert abs(len(variants[0]) - len(wav)) > 100  # the speed-shifted ones really change length
+
+
+def test_calibration_self_test_fits_temperature_and_threshold(client):
+    c, app_module, _ = client
+    assert c.get("/api/sounds").json()["calibration"]["ready"] is False
+    for i in range(3):
+        enroll(c, "Hum", tone(140, seed=i))
+        enroll(c, "Hiss", hiss(seed=i))
+    cal = c.get("/api/sounds").json()["calibration"]
+    assert cal["ready"] and cal["n"] == 6 and cal["right"] == 6 and cal["accuracy"] == 1.0
+    assert 0.01 <= cal["temp"] <= 1.0 and 0.1 <= cal["threshold"] <= 0.9
+    assert app_module.store.threshold == cal["threshold"]
+    c.delete("/api/sounds/Hiss")
+    assert c.get("/api/sounds").json()["calibration"]["ready"] is False  # recalibrates on forget

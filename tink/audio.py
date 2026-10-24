@@ -39,6 +39,17 @@ def is_silent(wav: np.ndarray, floor: float = 0.005) -> bool:
     return n == 0 or float(np.sqrt((wav[: n * 320].reshape(n, 320) ** 2).mean(axis=1)).max()) < floor
 
 
+def augment(wav: np.ndarray, seed: int = 0) -> list[np.ndarray]:
+    """Four cheap variants of one take: about a semitone up and down (speed change), and two levels of
+    background noise. The same 5 recordings then cover more of how a voice drifts and a room sounds."""
+    rng = np.random.default_rng(seed)
+    power = float(np.mean(wav**2)) or 1e-8
+    noisy = [wav + rng.normal(0, np.sqrt(power / 10 ** (snr / 10)), len(wav)).astype(np.float32) for snr in (25, 15)]
+    # resample_poly(wav, up, down) plays the take faster or slower, which also shifts its pitch
+    shifted = [resample_poly(wav, up, down).astype(np.float32) for up, down in ((16, 17), (17, 16))]
+    return shifted + noisy
+
+
 def to_wav_bytes(wav: np.ndarray) -> bytes:
     buf = io.BytesIO()
     sf.write(buf, wav, SR, format="WAV", subtype="PCM_16")
