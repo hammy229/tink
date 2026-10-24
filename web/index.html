@@ -58,6 +58,10 @@
           <span>Taught phrase: <b id="taughtText"></b></span>
           <button class="linkish" id="useTaught">Say the taught phrase instead</button>
         </div>
+        <div class="alarm-box" id="alarmBox" hidden role="alert">
+          <button class="btn ack" id="ack"><i class="ph-fill ph-hand-waving" aria-hidden="true"></i><span>I'm here</span></button>
+          <span>Tink repeats this until someone answers.</span>
+        </div>
         <ol class="ranked" id="ranked" hidden aria-label="How sure Tink is"></ol>
         <div class="feedback" id="feedback" hidden>
           <span id="feedbackMsg">Did Tink get it right?</span>
@@ -130,6 +134,10 @@
             </div>
             <span class="help">With a yes sound and a no sound, Tink asks instead of guessing when it is unsure.</span>
           </fieldset>
+          <label class="urgent-pick" for="surgent">
+            <input type="checkbox" id="surgent">
+            <span><b>Urgent</b><span class="help">Pain, can't breathe, help. Tink alarms right away, even when it is less sure, until someone answers.</span></span>
+          </label>
           <div class="enroll-takes">
             <button type="submit" class="btn" id="take"><i class="ph-fill ph-record" aria-hidden="true"></i><span>Record take</span></button>
             <span class="takes" id="enrollDots" aria-live="polite"></span>
@@ -138,6 +146,15 @@
           <span class="help">Record the same sound about 5 times.</span>
           <p class="err" id="err" role="alert"></p>
         </form>
+      </section>
+
+      <section class="panel" aria-labelledby="roomTitle">
+        <div class="head"><h2 id="roomTitle">Room noise</h2><small id="roomCount">not recorded</small></div>
+        <p class="help">Record a few seconds of the room with nobody making a sound. Tink then ignores chatter, footsteps, and fans instead of guessing at them.</p>
+        <div class="enroll-takes">
+          <button type="button" class="btn quiet" id="roomTake"><i class="ph ph-waveform" aria-hidden="true"></i><span>Record 3 seconds of room</span></button>
+        </div>
+        <p class="err" id="roomErr" role="alert"></p>
       </section>
     </aside>
   </main>

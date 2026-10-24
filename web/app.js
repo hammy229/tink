@@ -21,7 +21,9 @@
   let muted = false, lastSaid = null, lastLang = null, lastName = null, lastAsk = false;
   let busy = false, enrolling = false;
   const log = [];
-  const tintOf = (name) => { const i = sounds.findIndex((x) => x.name === name); return i < 0 ? "var(--ash)" : `var(--t${i % 6})`; };
+  const isRoom = (s) => s.role === "background";
+  const realSounds = () => sounds.filter((s) => !isRoom(s));
+  const tintOf = (name) => { const i = realSounds().findIndex((x) => x.name === name); return i < 0 ? "var(--ash)" : `var(--t${i % 6})`; };
 
   // ---------- API ----------
   async function api(path, opts = {}, ms = 25000) {
@@ -64,7 +66,7 @@
   // Records until the sound ends (silenceMs of quiet after something loud) or maxMs passes.
   // Resolves with a 16-bit WAV Blob at the mic's native rate; the backend resamples to 16 kHz.
   let stream, ctx;
-  async function recordClip({ maxMs = 4000, silenceMs = 700, startTimeoutMs = 6000, level = 0.02 } = {}) {
+  async function recordClip({ maxMs = 4000, silenceMs = 700, startTimeoutMs = 6000, level = 0.02, fixedMs = 0 } = {}) {
     if (!stream || stream.getAudioTracks().every((t) => t.readyState === "ended")) {
       stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true },
@@ -87,7 +89,9 @@
         resolve(encodeWav(chunks, ctx.sampleRate));
       };
       // If the audio callback never fires (suspended context, unplugged mic), don't hang forever.
-      const guard = setTimeout(() => finish(heardAt ? null : new Error("silence")), startTimeoutMs + maxMs + 500);
+      const guard = fixedMs
+        ? setTimeout(() => finish(), fixedMs) // room noise: record a fixed stretch, whatever the level
+        : setTimeout(() => finish(heardAt ? null : new Error("silence")), startTimeoutMs + maxMs + 500);
       proc.onaudioprocess = (e) => {
         const d = new Float32Array(e.inputBuffer.getChannelData(0));
         chunks.push(d);
@@ -95,6 +99,7 @@
         const rms = Math.sqrt(sum / d.length), now = performance.now();
         setLevel(Math.min(1, rms * 12));
         if (rms > level) { lastLoud = now; heardAt = heardAt || now; }
+        if (fixedMs) return;
         if (!heardAt && now - t0 > startTimeoutMs) return finish(new Error("silence"));
         if (heardAt && (now - lastLoud > silenceMs || now - heardAt > maxMs)) finish();
       };
@@ -190,7 +195,7 @@
   const hideResult = () => { for (const id of ["ranked", "feedback", "taught"]) $(id).hidden = true; };
 
   async function listen() {
-    if (busy || enrolling || sounds.length < minSounds) return;
+    if (busy || enrolling || alarmOn || realSounds().length < minSounds) return;
     busy = true; $("listen").disabled = true; $("take").disabled = true;
     setStage("listening", "Listening");
     phrase.textContent = " "; why.textContent = ""; hideResult();
@@ -215,12 +220,19 @@
       $("loop").checked = false;
     }
     await spoken;
-    busy = false; $("take").disabled = false; $("listen").disabled = sounds.length < minSounds;
-    if ($("loop").checked) { await wait(lastAsk ? 1500 : 500); listen(); }
-    else if (!stage.classList.contains("error")) statusText.textContent = "Ready";
+    busy = false; $("take").disabled = false; $("listen").disabled = alarmOn || realSounds().length < minSounds;
+    if ($("loop").checked && !alarmOn) { await wait(lastAsk ? 1500 : 500); listen(); }
+    else if (!stage.classList.contains("error") && !alarmOn) statusText.textContent = "Ready";
   }
 
   function showResult(r) {
+    if (r.background) {
+      setStage("missed", "Only room noise");
+      phrase.textContent = $("loop").checked ? "\u00a0" : "Just room noise.";
+      why.textContent = "Tink ignores sounds that match the room.";
+      return Promise.resolve();
+    }
+    if (r.urgent) return startAlarm(r);
     lastAsk = r.ask; lastName = r.name;
     const top = r.ranked[0];
     const heard = r.matched && !r.ask;
@@ -295,7 +307,7 @@
   function renderLog() {
     $("log").innerHTML = log.slice(-12).reverse().map((e) => `
       <li><time>${esc(e.t)}</time><span class="text${e.stamp === "Wrong" ? " struck" : ""}">${esc(e.text)}</span>
-      <span class="stamp${e.stamp === "Wrong" ? " wrong" : ""}" style="--t:${e.name ? tintOf(e.name) : "var(--control-line)"}">${e.stamp}</span></li>`).join("");
+      <span class="stamp${e.stamp === "Wrong" ? " wrong" : e.stamp === "Urgent" || e.stamp === "Answered" ? " urgent" : ""}" style="--t:${e.name ? tintOf(e.name) : "var(--control-line)"}">${e.stamp}</span></li>`).join("");
     $("logEmpty").hidden = log.length > 0;
   }
 
@@ -309,19 +321,21 @@
         <span class="takes" aria-label="${s.takes} takes">${dots(s.takes)}</span>
         <button class="forget" data-name="${esc(s.name)}" aria-label="Forget ${esc(s.name)}" title="Forget"><i class="ph ph-trash" aria-hidden="true"></i></button>
         <span class="says">says "${esc(s.phrase)}"</span>
-        ${s.cues.length || s.role ? `<span class="cuelist">${s.role ? `<span class="cue role">${s.role} answer</span>` : ""}${s.cues.map((c) => `<span class="cue">${cueLabel(c)}</span>`).join("")}</span>` : ""}
+        ${s.cues.length || s.role || s.urgent ? `<span class="cuelist">${s.urgent ? `<span class="cue urgent">urgent</span>` : ""}${isRoom(s) ? `<span class="cue">room noise, ignored</span>` : s.role ? `<span class="cue role">${s.role} answer</span>` : ""}${s.cues.map((c) => `<span class="cue">${cueLabel(c)}</span>`).join("")}</span>` : ""}
       </li>`).join("");
     $("soundsEmpty").hidden = sounds.length > 0;
-    $("count").textContent = sounds.length ? `${sounds.length} sound${sounds.length > 1 ? "s" : ""}` : "";
+    const real = realSounds().length, room = sounds.find(isRoom);
+    $("count").textContent = real ? `${real} sound${real > 1 ? "s" : ""}` : "";
+    $("roomCount").textContent = room ? `${room.takes} take${room.takes === 1 ? "" : "s"} recorded` : "not recorded";
 
-    const ready = sounds.length >= minSounds;
+    const ready = real >= minSounds;
     $("listen").disabled = busy || enrolling || !ready;
     $("guide").hidden = ready;
-    $("guideCount").textContent = `${Math.min(sounds.length, minSounds)} of ${minSounds} taught`;
+    $("guideCount").textContent = `${Math.min(real, minSounds)} of ${minSounds} taught`;
     $("guide").firstElementChild.classList.toggle("done", ready);
     if (!busy && !ready) {
       setStage("idle", "Ready"); hideResult();
-      phrase.textContent = sounds.length ? "One more sound to go." : "Teach Tink two sounds.";
+      phrase.textContent = real ? "One more sound to go." : "Teach Tink two sounds.";
       why.textContent = "Tink compares sounds against each other, so it needs at least two.";
     } else if (!busy && stage.classList.contains("idle")) {
       phrase.textContent = "Make a sound Tink knows.";
@@ -373,6 +387,7 @@
       const fd = new FormData();
       fd.append("name", name); fd.append("phrase", says); fd.append("cues", JSON.stringify(cues));
       fd.append("role", document.querySelector('#roleBox input:checked')?.value || "");
+      fd.append("urgent", $("surgent").checked ? "true" : "false");
       fd.append("audio", clip, "take.wav");
       const r = await api("/api/enroll", { method: "POST", body: fd });
       enrollTakes = r.takes; drawTakes(); chime(true);
@@ -382,12 +397,69 @@
       $("err").textContent = micError(err);
     }
     enrolling = false; $("enroll").classList.remove("recording");
-    $("take").disabled = false; $("listen").disabled = sounds.length < minSounds;
+    $("take").disabled = false; $("listen").disabled = realSounds().length < minSounds;
     takeLabel(enrollTakes >= 5 ? "Record another take" : enrollTakes ? "Record next take" : "Record take");
   });
   $("done").addEventListener("click", () => {
-    enrollTakes = 0; drawTakes(); $("enroll").reset(); $("sname").readOnly = false; $("done").hidden = true; $("err").textContent = "";
+    enrollTakes = 0; drawTakes(); $("enroll").reset(); $("surgent").checked = false; $("sname").readOnly = false; $("done").hidden = true; $("err").textContent = "";
     takeLabel("Record take"); $("sname").focus();
+  });
+
+  // ---------- Room noise ----------
+  $("roomTake").addEventListener("click", async () => {
+    if (busy || enrolling) { $("roomErr").textContent = "Turn off Keep listening first, then record."; return; }
+    const b = $("roomTake"), label = b.querySelector("span");
+    enrolling = true; b.disabled = true; $("roomErr").textContent = ""; label.textContent = "Recording the room, stay quiet";
+    try {
+      const clip = await recordClip({ fixedMs: 3000 });
+      const fd = new FormData();
+      fd.append("name", "Room noise"); fd.append("phrase", "(room noise)"); fd.append("role", "background");
+      fd.append("audio", clip, "room.wav");
+      await api("/api/enroll", { method: "POST", body: fd });
+      await refresh();
+    } catch (err) { $("roomErr").textContent = micError(err); }
+    enrolling = false; b.disabled = false; label.textContent = "Record 3 more seconds";
+    $("listen").disabled = realSounds().length < minSounds;
+  });
+
+  // ---------- Urgent alarm ----------
+  // An urgent sound turns the screen alarm red, sounds a two-tone alarm, and repeats the phrase
+  // until someone presses "I'm here". Keep listening pauses until then.
+  let alarmOn = false, alarmTimer = null, alarmEntry = null;
+  function siren() {
+    try {
+      ctx = ctx || new AudioContext();
+      const now = ctx.currentTime;
+      [880, 660, 880, 660].forEach((f, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain(), t = now + i * 0.3;
+        o.type = "triangle"; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.2, t + 0.02); g.gain.setValueAtTime(0.2, t + 0.26); g.gain.linearRampToValueAtTime(0.0001, t + 0.3);
+        o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + 0.32);
+      });
+    } catch {}
+  }
+  async function startAlarm(r) {
+    alarmOn = true; lastName = r.name; lastAsk = false;
+    document.body.classList.add("alarm");
+    setStage("heard", "Urgent", "var(--alarm)");
+    phrase.textContent = r.say;
+    why.innerHTML = `Heard <b>${esc(r.name.toLowerCase())}</b>, marked urgent · <span class="conf">${pct(r.p)}</span> sure`;
+    hideResult(); $("guide").hidden = true; $("alarmBox").hidden = false; $("listen").disabled = true;
+    lastSaid = r.say; lastLang = null; $("repeat").disabled = false;
+    addLog(r.say, "Urgent", r.name); alarmEntry = log[log.length - 1];
+    renderSounds(r.name);
+    $("ack").focus();
+    const ring = async () => { if (!alarmOn) return; siren(); await wait(1300); if (alarmOn) await speak(r.say); if (alarmOn) alarmTimer = setTimeout(ring, 4000); };
+    ring();
+  }
+  $("ack").addEventListener("click", () => {
+    alarmOn = false; clearTimeout(alarmTimer);
+    try { speechSynthesis.cancel(); } catch {}
+    document.body.classList.remove("alarm", "speaking"); $("alarmBox").hidden = true; $("listen").disabled = realSounds().length < minSounds;
+    if (alarmEntry) { alarmEntry.stamp = "Answered"; renderLog(); }
+    setStage("idle", "Ready");
+    why.textContent = "Someone answered. Tink is listening again when you are ready.";
+    if ($("loop").checked) setTimeout(listen, 800);
   });
 
   // ---------- Controls ----------

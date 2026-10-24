@@ -10,6 +10,7 @@
   --ash: #9c958c;            /* nothing matched */
   --light: #f3b648;          /* primary action: the lamp */
   --miss: #f0907f;
+  --alarm: #ef6a5b;          /* urgent: ink on it 6.2:1 */
   /* film tints, one per taught sound, in teaching order */
   --t0: #f3b648; --t1: #3aa39b; --t2: #e46f7a; --t3: #a58ad8; --t4: #93c45e; --t5: #62acdf;
   --scrim: var(--paper-dim);
@@ -98,6 +99,9 @@ body.speaking .top, body.speaking .side, body.speaking .lower, body.speaking .pa
 .missed .scrim { --scrim: var(--paper-dim); }
 .error .scrim { --scrim: var(--ash); }
 /* .heard sets --scrim inline to the heard sound's tint */
+/* urgent: the screen turns alarm red and pulses about once a second until someone answers */
+.alarm .scrim { --scrim: var(--alarm) !important; animation: alarm-pulse 1.6s steps(1, end) infinite; }
+@keyframes alarm-pulse { 0%, 100% { background-color: var(--alarm); } 50% { background-color: #f6b1a6; } } /* ink on the light phase 10:1 */
 /* on the lit screen, focus is drawn in ink: the lamp colour would vanish against the paper or an amber tint */
 .scrim :focus-visible { outline-color: var(--ink); }
 
@@ -136,6 +140,10 @@ body.speaking .top, body.speaking .side, body.speaking .lower, body.speaking .pa
 .ranked .bar { grid-column: 1 / -1; height: 8px; border-radius: 4px; background: var(--t); box-shadow: inset 0 0 0 1.5px var(--ink); transform-origin: left; animation: grow .6s var(--ease); }
 .ranked li.unknown .bar { background: rgba(21, 17, 14, .3); box-shadow: none; }
 @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.alarm-box { display: grid; justify-items: center; gap: 8px; font-weight: 700; }
+.btn.ack { min-height: 72px; padding: 16px 44px; font-size: 22px; background: var(--ink); color: var(--paper); }
+.btn.ack .ph-fill { font-size: 26px; }
+body.present .btn.ack { min-height: 88px; font-size: 28px; }
 .feedback { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; font-size: 15.5px; }
 .feedback .btn { background: var(--ink); color: var(--paper); }
 .feedback .btn.quiet { background: transparent; color: var(--ink); border-color: var(--ink); }
@@ -200,6 +208,11 @@ form { display: grid; gap: 14px; }
 .enroll-takes { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .enroll-takes .takes i { width: 14px; height: 14px; }
 .recording #take { background: var(--miss); }
+.urgent-pick { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--control-line); border-radius: 12px; cursor: pointer; }
+.urgent-pick:has(input:checked) { border-color: var(--alarm); background: color-mix(in srgb, var(--alarm) 12%, transparent); }
+.urgent-pick input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--alarm); }
+.urgent-pick > span { display: grid; gap: 2px; }
+.cue.urgent { border-color: var(--alarm); color: var(--fg); }
 .err { color: var(--miss); font-size: 14.5px; min-height: 1.2em; margin: 0; }
 
 /* ---------- lower: the stamped log and the packet ---------- */
@@ -211,6 +224,7 @@ form { display: grid; gap: 14px; }
 .log .text.struck { text-decoration: line-through; text-decoration-thickness: 2px; color: var(--muted); }
 .stamp { font-size: 12.5px; font-weight: 700; letter-spacing: .04em; padding: 2px 9px; border-radius: 6px; border: 1.5px solid var(--t, var(--control-line)); color: var(--fg); transform: rotate(-2deg); white-space: nowrap; }
 .stamp.wrong { border-color: var(--miss); color: var(--miss); }
+.stamp.urgent { border-color: var(--alarm); background: var(--alarm); color: var(--ink); }
 .packet { color: var(--muted); font-size: 14.5px; }
 .packet summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; }
 .packet pre { margin: 8px 0 0; padding: 14px; border-radius: 12px; background: var(--house); border: 1px solid var(--line); font-family: var(--mono); font-size: 12.5px; overflow: auto; max-height: 260px; color: var(--fg); }
