@@ -492,3 +492,78 @@ body.present .app-region .wrap { border: 0; border-radius: 0; box-shadow: none; 
   .pipeline { grid-template-columns: 1fr; padding: 14px; }.pipeline > div { min-height: 110px; }.pipeline > i { transform: rotate(90deg); justify-self: center; }
   .final-cta { min-height: 610px; }.final-cta h2 { font-size: clamp(46px, 13vw, 68px); }
 }
+
+/* ---------- Neverland motion layer ---------- */
+#magicDust { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 30; pointer-events: none; mix-blend-mode: screen; opacity: .88; }
+body.present #magicDust { display: none; }
+
+.wordmark-star { animation: star-breathe 3.2s ease-in-out infinite; }
+.wordmark:hover .wordmark-star { animation: star-spin .8s var(--ease); }
+.hero h1 em { display: inline-block; background: linear-gradient(105deg, #8af467 8%, #d9ff99 40%, #ffd95e 51%, #9dff72 66%, #68dc72 100%); background-size: 240% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: enchanted-type 6s linear infinite; filter: drop-shadow(0 0 18px rgba(104,220,114,.12)); }
+.button.primary { position: relative; overflow: hidden; isolation: isolate; }
+.button.primary::before { content: ""; position: absolute; inset: -40% auto -40% -35%; width: 25%; background: linear-gradient(90deg, transparent, rgba(255,255,230,.85), transparent); transform: skewX(-20deg); animation: button-shimmer 4.2s ease-in-out infinite; z-index: -1; }
+
+.aurora { position: absolute; z-index: -3; width: 420px; height: 220px; border-radius: 50%; filter: blur(48px); opacity: .2; mix-blend-mode: screen; pointer-events: none; }
+.aurora-one { left: 2%; top: 9%; background: linear-gradient(115deg, #25d879, transparent 72%); animation: aurora-one 9s ease-in-out infinite alternate; }
+.aurora-two { right: -4%; bottom: 3%; background: linear-gradient(240deg, #ffd44f, #1fa968 65%, transparent); animation: aurora-two 11s ease-in-out infinite alternate; }
+.magic-sky { position: absolute; inset: 0; z-index: 5; overflow: hidden; pointer-events: none; }
+.magic-sky i { position: absolute; top: 8%; left: 15%; width: 110px; height: 1px; opacity: 0; background: linear-gradient(90deg, transparent, #fff6b5 68%, #fff); transform: rotate(-28deg); filter: drop-shadow(0 0 5px #ffd34f); animation: shooting-star 7s ease-in infinite; }
+.magic-sky i:nth-child(2) { top: 28%; left: 48%; width: 75px; animation-delay: 2.6s; animation-duration: 8.5s; }
+.magic-sky i:nth-child(3) { top: 58%; left: 8%; width: 55px; animation-delay: 5s; animation-duration: 10s; }
+.story-moon { animation: moon-breathe 7s ease-in-out infinite; }
+.orbit-one { animation: orbit-breathe 6s ease-in-out infinite alternate; }
+.orbit-two { animation: rotate 32s linear infinite, orbit-breathe 7s ease-in-out infinite alternate-reverse; }
+.pixie-trail i { animation: dust-twinkle 1.7s ease-in-out infinite alternate; }
+.pixie-trail i:nth-child(2) { animation-delay: .2s; }.pixie-trail i:nth-child(3) { animation-delay: .45s; }.pixie-trail i:nth-child(4) { animation-delay: .7s; }.pixie-trail i:nth-child(5) { animation-delay: .95s; }.pixie-trail i:nth-child(6) { animation-delay: 1.2s; }
+.signal-window { translate: var(--pointer-x, 0) var(--pointer-y, 0); animation: card-float 5.5s ease-in-out infinite; will-change: translate, transform; }
+.signal-window::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(110deg, transparent 34%, rgba(151,255,170,.075) 47%, rgba(255,230,119,.1) 50%, transparent 62%); background-size: 250% 100%; animation: glass-sweep 6.5s ease-in-out infinite; }
+.translation-chip { animation: chip-float 3.8s ease-in-out infinite alternate; }
+.waveform i { animation: wave 1.15s ease-in-out infinite alternate; }
+.waveform i:nth-child(2n) { animation-delay: -.65s; }.waveform i:nth-child(3n) { animation-delay: -.28s; }.waveform i:nth-child(5n) { animation-delay: -.88s; }
+.sound-ribbon i { animation: star-breathe 2.2s ease-in-out infinite; }
+.sound-ribbon span { display: inline-block; animation: ribbon-float 5s ease-in-out infinite alternate; }
+.sound-ribbon span:nth-of-type(2n) { animation-delay: -2.5s; }
+
+.step-card { transition: transform .5s var(--ease), border-color .4s, box-shadow .5s; overflow: hidden; }
+.step-card:hover { transform: translateY(-9px); border-color: rgba(255,211,79,.28); box-shadow: 0 24px 70px rgba(0,0,0,.25), 0 0 45px rgba(73,198,107,.08); z-index: 2; }
+.dots-visual span { animation: teach-glow 2.2s ease-in-out infinite; }
+.dots-visual span:nth-child(2) { animation-delay: .14s; }.dots-visual span:nth-child(3) { animation-delay: .28s; }.dots-visual span:nth-child(4) { animation-delay: .42s; }.dots-visual span:nth-child(5) { animation-delay: .56s; }
+.rings-visual span { animation: listening-ring 3s ease-out infinite; }.rings-visual::before { animation: listening-ring 3s .7s ease-out infinite; }.rings-visual::after { animation: mic-core 2s ease-in-out infinite; }
+.speak-visual span { animation: speech-float 3.6s ease-in-out infinite; }.speak-visual i { animation: speaker-ring 1.7s ease-in-out infinite; }
+.privacy-node.device > i { animation: shield-glow 3s ease-in-out infinite; }
+.privacy-line i { animation: flow-arrow 2s ease-in-out infinite; }
+.pipeline > i { animation: flow-arrow 2s ease-in-out infinite; }
+.pipeline > div { transition: transform .4s var(--ease), color .3s; }.pipeline > div:hover { transform: translateY(-6px); color: var(--violet-soft); }
+.final-glow { animation: final-star 5s ease-in-out infinite; }
+.final-stars i { animation: dust-twinkle 2s ease-in-out infinite alternate; }.final-stars i:nth-child(2n) { animation-delay: -1.1s; }
+
+.motion-ready .reveal-target { opacity: 0; transform: translateY(46px) scale(.985); filter: blur(8px); transition: opacity .9s var(--ease) var(--reveal-delay, 0ms), transform 1s var(--ease) var(--reveal-delay, 0ms), filter .9s ease var(--reveal-delay, 0ms); }
+.motion-ready .reveal-target.revealed { opacity: 1; transform: none; filter: none; }
+
+@keyframes star-breathe { 50% { transform: scale(1.14) rotate(8deg); box-shadow: 0 0 45px rgba(255,211,79,.68); } }
+@keyframes star-spin { to { transform: rotate(180deg) scale(1.14); } }
+@keyframes enchanted-type { to { background-position: 240% center; } }
+@keyframes button-shimmer { 0%, 55% { left: -35%; } 78%, 100% { left: 125%; } }
+@keyframes aurora-one { to { transform: translate(110px, 65px) rotate(12deg) scale(1.2); opacity: .34; } }
+@keyframes aurora-two { to { transform: translate(-90px, -55px) rotate(-16deg) scale(1.15); opacity: .28; } }
+@keyframes shooting-star { 0%, 74% { opacity: 0; transform: translate(-80px, -20px) rotate(-28deg); } 76% { opacity: .95; } 86%, 100% { opacity: 0; transform: translate(410px, 210px) rotate(-28deg); } }
+@keyframes moon-breathe { 50% { opacity: .32; transform: scale(1.035); box-shadow: 0 0 130px rgba(255,211,79,.32); } }
+@keyframes orbit-breathe { to { scale: 1.055; opacity: .72; } }
+@keyframes dust-twinkle { to { opacity: 1; transform: scale(1.9) rotate(45deg); } }
+@keyframes card-float { 0%, 100% { transform: rotate(1.5deg) translateY(0); } 50% { transform: rotate(.4deg) translateY(-13px); } }
+@keyframes glass-sweep { 0%, 58% { background-position: 180% 0; } 84%, 100% { background-position: -80% 0; } }
+@keyframes chip-float { to { transform: translateY(-9px) rotate(1.5deg); } }
+@keyframes ribbon-float { to { transform: translateY(-5px); color: var(--fg); } }
+@keyframes teach-glow { 50% { transform: translateY(-8px) scale(1.12); border-color: var(--light); box-shadow: 0 0 20px rgba(255,211,79,.3); } }
+@keyframes listening-ring { 0% { scale: .82; opacity: .8; } 80%, 100% { scale: 1.2; opacity: 0; } }
+@keyframes mic-core { 50% { scale: 1.1; box-shadow: 0 0 28px rgba(104,220,114,.24); } }
+@keyframes speech-float { 50% { transform: translateY(-9px) rotate(-1deg); box-shadow: 0 27px 58px rgba(0,0,0,.33); } }
+@keyframes speaker-ring { 50% { transform: translate(105px, -48px) scale(1.18); filter: drop-shadow(0 0 10px var(--light)); } }
+@keyframes shield-glow { 50% { box-shadow: 0 0 34px rgba(130,240,188,.2); transform: scale(1.06); } }
+@keyframes flow-arrow { 50% { color: var(--light); transform: translateX(5px); } }
+@keyframes final-star { 50% { opacity: .34; transform: translateY(16px) scale(1.2) rotate(22deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  #magicDust { display: none !important; }
+  .motion-ready .reveal-target { opacity: 1; transform: none; filter: none; }
+}

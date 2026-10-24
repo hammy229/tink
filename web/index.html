@@ -14,6 +14,7 @@
 </head>
 <body>
 <a class="skip-link" href="#demo">Skip to the live app</a>
+<canvas id="magicDust" aria-hidden="true"></canvas>
 
 <div class="site-shell">
   <nav class="site-nav" aria-label="Main navigation">
@@ -42,6 +43,8 @@
       </div>
 
       <div class="hero-visual" aria-label="A sound becoming a spoken message">
+        <div class="aurora aurora-one" aria-hidden="true"></div><div class="aurora aurora-two" aria-hidden="true"></div>
+        <div class="magic-sky" aria-hidden="true"><i></i><i></i><i></i></div>
         <div class="story-moon" aria-hidden="true"></div>
         <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
         <div class="pixie-trail" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
@@ -135,6 +138,7 @@
   <footer><a class="wordmark" href="#top"><span class="wordmark-star" aria-hidden="true">✦</span><span>Tink</span></a><p>Built at HackTX ’26 for communication beyond words.</p><a href="https://github.com/SanjithTammana/Tink-HackTX" target="_blank" rel="noreferrer">GitHub <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a></footer>
 </div>
 
+<script src="magic.js"></script>
 <script src="app.js"></script>
 <script type="module" src="cues.js"></script>
 </body>
