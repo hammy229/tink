@@ -8,6 +8,8 @@ Tink does the same for people who are losing their speech to ALS. It learns the 
 
 Built at HackTX 26 on [voc2vec](https://ieeexplore.ieee.org/document/10890672) (Koudounas et al., ICASSP 2025), a speech model pretrained on 125 hours of non-verbal vocalizations.
 
+**Status:** finished weekend project (October 2026). The app runs end to end; it is no longer under active development.
+
 ## Run it
 
 Needs [uv](https://docs.astral.sh/uv/). The first run downloads the model (~360 MB).
