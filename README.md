@@ -2,13 +2,13 @@
 
 Tinker Bell can't speak in words. She talks in chimes, and Peter understands her.
 
-Tink does the same for people who are losing their speech to ALS. It learns the sounds one person can still make (a hum, two clicks, a sigh) and says out loud what each one means. While the person can still speak, they bank their own voice: they record each phrase, and when Tink recognizes the sound it plays their recording instead of a computer voice. Everything runs on the laptop, and nothing is sent to any AI service by default.
+Tink does the same for people who can make sounds but not words: people losing their speech to ALS, stroke survivors, minimally speaking autistic people. It learns the sounds one person can make (a hum, two clicks, a sigh) and says out loud what each one means. A caregiver can answer back by typing, and Tink speaks the reply. For people who are losing their voice, there is message banking: while they can still speak, they record each phrase, and when Tink recognizes the sound it plays their recording instead of a computer voice. Everything runs on the laptop, and nothing is sent to any AI service by default.
 
-**ALS part:** how it works and where it lives in the code is in [docs/als.md](docs/als.md).
+How message banking works for ALS, and where each piece lives in the code: [docs/als.md](docs/als.md).
 
 Built at HackTX 26 on [voc2vec](https://ieeexplore.ieee.org/document/10890672) (Koudounas et al., ICASSP 2025), a speech model pretrained on 125 hours of non-verbal vocalizations.
 
-**Status:** finished weekend project (October 2026). The app runs end to end; it is no longer under active development.
+**Status:** finished weekend project (October 2026). The app runs end to end, but it has not been tested with nonspeaking users, and there is no measured accuracy yet: `risk_test.py` measures it on your own recordings. It is no longer under active development.
 
 ## Run it
 

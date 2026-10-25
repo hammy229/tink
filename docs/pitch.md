@@ -1,5 +1,7 @@
 # Pitch and demo script
 
+Written for HackTX 26 judging. The project was not submitted; kept for reference.
+
 Judging: Sun 2:00 to 5:00 in WEL (table). Pitching: Sun 5:30 in GDC 2.216 (projected). Press **P** for present mode before you start.
 
 ## Before judges arrive (every time)
@@ -31,8 +33,6 @@ Judging: Sun 2:00 to 5:00 in WEL (table). Pitching: Sun 5:30 in GDC 2.216 (proje
 *(Optional, before pressing P: type "I'm coming, two minutes" in Answer back.)* The caregiver can answer too, and Tink speaks it aloud.
 
 **(1:15) How.** Underneath is voc2vec, a model from ICASSP this year trained only on non-verbal sounds. Five recordings per sound, no training. A small Bayesian model turns similarities into honest probabilities, and learns from time of day and optional face cues. It all runs on this laptop. No AI service sees anything.
-
-**(1:35) The number.** On our own team's recordings, voc2vec got [[X]]% right. A general speech model on the same clips got [[Y]]%. *(Only say this if you ran `risk_test.py --compare`. Otherwise skip it.)*
 
 **(1:45) Close.** Peter understood Tinker Bell because he knew her. Tink keeps a person's own voice reachable after the words are gone.
 

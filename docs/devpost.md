@@ -1,6 +1,6 @@
 # Devpost draft: Tink
 
-Paste each section into its Devpost field. Before submitting, replace every `[[...]]` with a real number from `risk_test.py`, or delete the sentence. Do not submit a number we did not measure.
+Draft written for the HackTX 26 Devpost. The project was not submitted, so this is kept as a write-up of the idea. No accuracy numbers were measured.
 
 ---
 
@@ -60,13 +60,9 @@ A sound now opens a message in the person's own voice. That is the part we would
 
 It is honest about uncertainty. The screen shows what Tink heard, how sure it is, and how sure it would have been from the sound alone, before time of day and face cues.
 
-Augmentation changed leave-one-out accuracy on our recordings from [[A]]% to [[B]]% (`uv run python risk_test.py --augment`).
-
-On recordings from our own team, voc2vec matched sounds correctly [[X]]% of the time in leave-one-out testing, against [[Y]]% for wav2vec2 and [[Z]]% for HuBERT on the same clips. (`uv run python risk_test.py --compare`)
-
 ## What we learned
 
-A model trained on the right data beats a bigger model trained on the wrong data. The paper reported this on benchmarks; we checked it on our own voices.
+A model trained on the right data beats a bigger model trained on the wrong data. The paper reported this on benchmarks; `risk_test.py --compare` checks it on your own recordings.
 
 Saying "I'm not sure" is a feature. Most of our design work went into the cases where Tink is wrong.
 
