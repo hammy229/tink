@@ -4,6 +4,8 @@ Tinker Bell can't speak in words. She talks in chimes, and Peter understands her
 
 Tink does the same for people who are losing their speech to ALS. It learns the sounds one person can still make (a hum, two clicks, a sigh) and says out loud what each one means. While the person can still speak, they bank their own voice: they record each phrase, and when Tink recognizes the sound it plays their recording instead of a computer voice. Everything runs on the laptop, and nothing is sent to any AI service by default.
 
+**ALS part:** how it works and where it lives in the code is in [docs/als.md](docs/als.md).
+
 Built at HackTX 26 on [voc2vec](https://ieeexplore.ieee.org/document/10890672) (Koudounas et al., ICASSP 2025), a speech model pretrained on 125 hours of non-verbal vocalizations.
 
 ## Run it
