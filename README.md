@@ -8,7 +8,7 @@ How message banking works for ALS, and where each piece lives in the code: [docs
 
 Built at HackTX 26 on [voc2vec](https://ieeexplore.ieee.org/document/10890672) (Koudounas et al., ICASSP 2025), a speech model pretrained on 125 hours of non-verbal vocalizations.
 
-**Status:** finished weekend project (October 2026). The app runs end to end, but it has not been tested with nonspeaking users, and there is no measured accuracy yet: `risk_test.py` measures it on your own recordings. It is no longer under active development.
+**Status:** finished weekend project (October 2026). The app runs end to end, but it has not been tested with nonspeaking users. On recorded sounds from 8 minimally speaking people ([ReCANVo](https://doi.org/10.5281/zenodo.5786860)), it guesses the meaning right 27% of the time against 19% chance: above chance, far from reliable. Details and what that means: [docs/accuracy.md](docs/accuracy.md). It is no longer under active development.
 
 ## Run it
 
@@ -126,6 +126,7 @@ tink/profiles.py per-person profiles for hosting
 tink/app.py      FastAPI routes, serves web/
 web/             frontend (plain HTML/CSS/JS, no build step); cues.js = MediaPipe face cues
 risk_test.py     layer sweep + threshold; --compare runs the baseline models
+eval_recanvo.py  accuracy on real nonspeaking people (ReCANVo), see docs/accuracy.md
 tests/           pytest suite (synthetic audio)
 PRODUCT.md       who Tink is for and what it must never claim
 ```
