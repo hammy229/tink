@@ -705,8 +705,6 @@
     g.fillStyle = edge; g.fillRect(0, 0, W, H);
     if (!reduce) requestAnimationFrame(frame);
   }
-  // the skyline drift is a loop nobody sees in a background tab
-  document.addEventListener("visibilitychange", () => document.documentElement.classList.toggle("tab-hidden", document.hidden));
   new ResizeObserver(size).observe(scrim);
   size();
   frame();
