@@ -381,6 +381,9 @@ a { color: inherit; text-decoration: none; }
 .hero-copy { grid-column: 1 / span 6; }
 .lede { max-width: 480px; margin: 24px 0 0; }
 .links { display: flex; flex-wrap: wrap; gap: 24px; margin-top: 32px; }
+.site-shell .byline { margin-top: 48px; }
+.byline a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; transition: color .15s; }
+.byline a:hover { color: var(--hover); }
 
 .hero-figure { grid-column: 7 / -1; position: relative; min-height: 560px; display: grid; place-items: center; overflow: hidden; }
 .hero-grid { position: absolute; inset: -20%; width: 140%; height: 140%; z-index: -1; }
@@ -440,6 +443,8 @@ a { color: inherit; text-decoration: none; }
 .footer-links span { color: var(--line); }
 .footer-links a, .footer-meta a { transition: color .15s; }
 .footer-links a:hover { color: var(--hover); }
+.footer-meta a { color: var(--ink); }
+.footer-meta a:hover { color: var(--hover); }
 .footer-meta { text-align: right; display: grid; gap: 4px; }
 
 /* scroll reveal, driven by site.js */
