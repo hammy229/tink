@@ -14,74 +14,83 @@
 </head>
 <body>
 <a class="skip-link" href="#demo">Skip to the live app</a>
-<canvas id="magicDust" aria-hidden="true"></canvas>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="mark" viewBox="0 0 32 24"><rect x="1" y="9" width="4" height="6" rx="2"/><rect x="8" y="4" width="4" height="16" rx="2"/><rect x="15" y="0" width="4" height="24" rx="2"/><rect x="22" y="6" width="4" height="12" rx="2"/><circle cx="30" cy="12" r="2"/></symbol>
+</svg>
+
+<nav class="rail" aria-label="Primary">
+  <a class="rail-mark" href="#top" aria-label="Tink home"><svg><use href="#mark"/></svg></a>
+  <div class="rail-links">
+    <a href="#top" aria-current="page">Home</a>
+    <a href="#how">How it works</a>
+    <a href="#demo">Try it</a>
+    <a href="#privacy">Privacy</a>
+  </div>
+  <span class="rail-year" aria-hidden="true">’26</span>
+</nav>
+
+<header class="topbar">
+  <nav aria-label="Primary">
+    <a class="rail-mark" href="#top" aria-label="Tink home"><svg><use href="#mark"/></svg></a>
+    <div class="topbar-links"><a href="#top" aria-current="page">Home</a><span aria-hidden="true">·</span><a href="#how">How</a><span aria-hidden="true">·</span><a href="#demo">Try it</a><span aria-hidden="true">·</span><a href="#privacy">Privacy</a></div>
+  </nav>
+</header>
 
 <div class="site-shell">
-  <nav class="site-nav" aria-label="Main navigation">
-    <a class="wordmark" href="#top" aria-label="Tink home"><span class="wordmark-star" aria-hidden="true">✦</span><span>Tink</span></a>
-    <div class="nav-links">
-      <a href="#how">How it works</a><a href="#privacy">Privacy</a>
-      <a href="https://github.com/hammy229/tink" target="_blank" rel="noreferrer">GitHub <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
-    </div>
-    <a class="nav-cta" href="#demo">Open Tink <i class="ph ph-arrow-down" aria-hidden="true"></i></a>
-  </nav>
-
   <main id="top">
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <div class="eyebrow"><span></span> Second star to the right · HackTX ’26</div>
-        <h1 id="hero-title">Every sound has<br><em>something to say.</em></h1>
-        <p class="story-hook">Tinker Bell spoke in chimes. Peter understood every one.</p>
-        <p class="hero-lede">Tink learns the hums, clicks, sighs, and short sounds one person can make—then speaks their meaning out loud, in their own banked voice.</p>
-        <div class="hero-actions">
-          <a class="button primary" href="#demo">Try the live app <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
-          <a class="button text-button" href="#how"><span class="play"><i class="ph-fill ph-play" aria-hidden="true"></i></span> See how it works</a>
+        <h1 id="hero-title" data-letters>Every sound has<br>something to say.</h1>
+        <p class="lede">Tink learns the hums, clicks, and sighs one person can still make, then says what each one means out loud, in their own banked voice.</p>
+        <div class="links">
+          <a class="arrow-link" href="#demo"><span>Try it</span><span aria-hidden="true">→</span></a>
+          <a class="arrow-link" href="#how"><span>How it works</span><span aria-hidden="true">→</span></a>
         </div>
-        <ul class="hero-notes" aria-label="Key details">
-          <li><i class="ph ph-laptop" aria-hidden="true"></i> Runs locally</li><li><i class="ph ph-waveform" aria-hidden="true"></i> About 5 recordings</li><li><i class="ph ph-user-sound" aria-hidden="true"></i> Their own voice</li>
-        </ul>
       </div>
-
-      <div class="hero-visual" aria-label="A sound becoming a spoken message">
-        <div class="aurora aurora-one" aria-hidden="true"></div><div class="aurora aurora-two" aria-hidden="true"></div>
-        <div class="magic-sky" aria-hidden="true"><i></i><i></i><i></i></div>
-        <div class="story-moon" aria-hidden="true"></div>
-        <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
-        <div class="pixie-trail" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-        <div class="fairy-light" aria-hidden="true">
-          <span class="fairy-head"></span><span class="fairy-body"></span><span class="fairy-skirt"></span>
-          <i class="fairy-wing wing-left"></i><i class="fairy-wing wing-right"></i><b class="fairy-wand">✦</b>
+      <div class="hero-figure" aria-hidden="true">
+        <svg class="hero-grid" viewBox="0 0 800 800" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M28 0H0V28" fill="none" stroke="var(--grid)" stroke-width="1"/></pattern>
+            <radialGradient id="fade" cx="50%" cy="50%" r="50%"><stop offset="10%" stop-color="#fff"/><stop offset="80%" stop-color="#fff" stop-opacity=".3"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></radialGradient>
+            <mask id="fadeMask"><rect width="100%" height="100%" fill="url(#fade)"/></mask>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)" mask="url(#fadeMask)"/>
+        </svg>
+        <div class="specimen">
+          <p class="eyebrow">Heard · 14:02</p>
+          <div class="wave"><i style="--h:.22"></i><i style="--h:.48"></i><i style="--h:.32"></i><i style="--h:.74"></i><i style="--h:.45"></i><i style="--h:.92"></i><i style="--h:.58"></i><i style="--h:1"></i><i style="--h:.62"></i><i style="--h:.82"></i><i style="--h:.38"></i><i style="--h:.68"></i><i style="--h:.28"></i><i style="--h:.52"></i><i style="--h:.2"></i></div>
+          <div class="specimen-row"><span class="eyebrow">Low hum</span><span class="specimen-arrow">→</span></div>
+          <p class="specimen-phrase">“I’m thirsty.”</p>
+          <p class="eyebrow specimen-foot"><span class="dot"></span> Spoken in her voice</p>
         </div>
-        <div class="signal-window">
-          <div class="window-bar"><span class="window-brand"><b>✦</b> Tink</span><span class="live-dot"><i></i> Listening</span></div>
-          <div class="signal-body">
-            <p class="signal-label">Sound detected</p>
-            <div class="waveform" aria-hidden="true"><i style="--h:22%"></i><i style="--h:48%"></i><i style="--h:32%"></i><i style="--h:74%"></i><i style="--h:45%"></i><i style="--h:92%"></i><i style="--h:58%"></i><i style="--h:100%"></i><i style="--h:62%"></i><i style="--h:82%"></i><i style="--h:38%"></i><i style="--h:68%"></i><i style="--h:28%"></i><i style="--h:52%"></i><i style="--h:20%"></i></div>
-            <div class="meaning-card"><div><span class="meaning-icon"><i class="ph-fill ph-speaker-high" aria-hidden="true"></i></span><span><small>Tink says</small><strong>“I’m thirsty.”</strong></span></div><span class="confidence">94% sure</span></div>
-          </div>
-        </div>
-        <div class="translation-chip"><span>low hum</span><i class="ph ph-arrow-right" aria-hidden="true"></i><b>“I’m cold,” in her voice</b></div>
-        <p class="visual-caption">From a little chime<br>to a meaning everyone can hear.</p>
       </div>
     </section>
 
-    <section class="sound-ribbon" aria-label="Sounds Tink can learn"><div><span>Hums</span><i>✦</i><span>Chimes</span><i>✦</i><span>Clicks</span><i>✦</i><span>Understood</span></div></section>
-
-    <section class="manifesto section-pad" aria-labelledby="manifesto-title">
-      <div class="section-kicker">A storybook idea, made real</div>
-      <div class="manifesto-grid"><h2 id="manifesto-title">Tinker Bell had Peter.<br><em>Everyone deserves to be understood.</em></h2><div class="manifesto-copy"><p>In Peter Pan, a sound like little bells could hold an entire thought—because someone knew how to listen.</p><p>For someone living with ALS, recovering from a stroke, or speaking a different language, a repeatable sound can carry a whole sentence. Tink helps the rest of the room understand.</p></div></div>
+    <section class="statement">
+      <p data-letters>Tink sits between a person and the room. It listens for the sounds they can still make, matches each one to a phrase they taught it, and says that phrase, so nobody has to guess.</p>
     </section>
 
-    <section class="steps section-pad" id="how" aria-labelledby="steps-title">
-      <div class="section-heading"><div><p class="section-kicker">A little magic, taught by you</p><h2 id="steps-title">Your own language<br>of sound.</h2></div><p>No spelling boards. No training run. Teach Tink a handful of examples and it is ready to listen.</p></div>
-      <div class="step-grid">
-        <article class="step-card teach-card"><div class="step-number">Chapter I</div><div class="step-visual dots-visual" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div><div><h3>Teach a chime</h3><p>Record a repeatable hum, click, sigh, or vowel about five times and add what it means.</p></div></article>
-        <article class="step-card listen-card"><div class="step-number">Chapter II</div><div class="step-visual rings-visual" aria-hidden="true"><span></span><i class="ph-fill ph-microphone"></i></div><div><h3>Make the sound</h3><p>Tink compares it with that person’s vocabulary and shows exactly how sure it is.</p></div></article>
-        <article class="step-card speak-card"><div class="step-number">Chapter III</div><div class="step-visual speak-visual" aria-hidden="true"><span>“I need help.”</span><i class="ph-fill ph-speaker-high"></i></div><div><h3>Hear the meaning</h3><p>Tink speaks the taught phrase—or translates it for the listener in the room.</p></div></article>
-      </div>
+    <section class="columns" aria-label="Who Tink is for">
+      <div><span class="eyebrow">For the person</span><h3>Their words. Their voice.</h3><p>Each phrase plays back as a recording of them saying it, banked while they still could.</p></div>
+      <div><span class="eyebrow">For caregivers</span><h3>Less guessing. Faster answers.</h3><p>Urgent sounds raise an alarm until someone answers, and you can type a reply that Tink says aloud.</p></div>
+      <div><span class="eyebrow">For privacy</span><h3>Nothing leaves the laptop.</h3><p>Audio, video, and the sound model stay on the device. No account, no cloud service.</p></div>
     </section>
 
-    <section class="demo-intro section-pad" id="demo" aria-labelledby="demo-title"><div><p class="section-kicker">The real product, not a mockup</p><h2 id="demo-title">Teach it. Try it.<br><em>Be understood.</em></h2></div><p>The app below is live. Teach at least two sounds, then press Listen and make one of them. Your first run downloads the voc2vec model.</p></section>
+    <section class="steps" id="how" aria-labelledby="steps-title">
+      <div class="section-head"><span class="eyebrow">How it works</span><h2 id="steps-title" data-letters>Five recordings, then it listens.</h2></div>
+      <ol class="step-list">
+        <li><span class="step-n">01</span><h3>Teach a sound</h3><p>Record a hum, click, sigh, or vowel about five times and type what it means.</p></li>
+        <li><span class="step-n">02</span><h3>Make the sound</h3><p>Tink compares it with that person’s sounds and shows how sure it is, including “I don’t know.”</p></li>
+        <li><span class="step-n">03</span><h3>Hear the meaning</h3><p>Tink plays the phrase in their banked voice, or reads it aloud if none is banked yet.</p></li>
+      </ol>
+    </section>
+
+    <section class="demo-intro" id="demo" aria-labelledby="demo-title">
+      <span class="eyebrow">Live app</span>
+      <h2 id="demo-title" data-letters>Try it below.</h2>
+      <p>This is the real app, not a mockup. Teach at least two sounds, press Listen, and make one of them. The first run downloads the voc2vec model.</p>
+    </section>
   </main>
 </div>
 
@@ -161,14 +170,35 @@
 </div>
 
 <div class="site-shell">
-  <section class="privacy section-pad" id="privacy" aria-labelledby="privacy-title">
-    <div class="privacy-copy"><p class="section-kicker">No shadow left behind</p><h2 id="privacy-title">Their voice stays<br><em>theirs.</em></h2><p>Microphone audio and banked voice recordings stay on the local laptop. Webcam video is analyzed in the browser and is never uploaded. Nothing is sent to an AI service.</p></div>
-    <div class="privacy-diagram" aria-label="Privacy data flow"><div class="privacy-node device"><i class="ph ph-laptop" aria-hidden="true"></i><span><strong>On this device</strong><small>Audio · video · sound model</small></span></div><div class="privacy-line"><span>only when enabled</span><i class="ph ph-arrow-right" aria-hidden="true"></i></div><div class="privacy-node cloud"><i class="ph ph-text-aa" aria-hidden="true"></i><span><strong>Text only</strong><small>Meaning · confidence · cue names</small></span></div></div>
+  <section class="privacy" id="privacy" aria-labelledby="privacy-title">
+    <div class="section-head"><span class="eyebrow">Privacy</span><h2 id="privacy-title" data-letters>Their voice stays theirs.</h2></div>
+    <dl class="ledger">
+      <div><dt>Microphone audio</dt><dd>Stays on this laptop</dd></div>
+      <div><dt>Banked voice recordings</dt><dd>Stays on this laptop</dd></div>
+      <div><dt>Webcam video</dt><dd>Read in the browser, never uploaded</dd></div>
+      <div><dt>AI services</dt><dd>None. Nothing is sent out.</dd></div>
+    </dl>
   </section>
-  <section class="tech section-pad" aria-labelledby="tech-title"><div class="tech-top"><div><p class="section-kicker">Fairy tale on top. Serious science underneath.</p><h2 id="tech-title">Purpose-built for<br>sounds beyond speech.</h2></div><p>Built on voc2vec, a model pretrained on non-verbal vocalizations, with a Bayesian layer that can admit uncertainty instead of forcing a guess.</p></div><div class="pipeline" aria-label="How Tink processes a sound"><div><span>01</span><b>Sound</b><small>Mic clip</small></div><i class="ph ph-arrow-right"></i><div><span>02</span><b>voc2vec</b><small>Sound embedding</small></div><i class="ph ph-arrow-right"></i><div><span>03</span><b>Bayes</b><small>Honest confidence</small></div><i class="ph ph-arrow-right"></i><div><span>04</span><b>Voice</b><small>Meaning, out loud</small></div></div></section>
-  <section class="final-cta"><div class="final-glow" aria-hidden="true">✦</div><div class="final-stars" aria-hidden="true"><i>·</i><i>✦</i><i>·</i><i>✦</i><i>·</i></div><p class="section-kicker">One sound can say everything</p><h2>Let every Tinker Bell<br><em>be understood.</em></h2><div class="hero-actions"><a class="button primary" href="#demo">Open Tink <i class="ph ph-arrow-up" aria-hidden="true"></i></a><a class="button text-button" href="https://github.com/hammy229/tink" target="_blank" rel="noreferrer"><i class="ph ph-github-logo" aria-hidden="true"></i> View the source</a></div></section>
-  <footer><a class="wordmark" href="#top"><span class="wordmark-star" aria-hidden="true">✦</span><span>Tink</span></a><p>Built at HackTX ’26 for communication beyond words.</p><a href="https://github.com/hammy229/tink" target="_blank" rel="noreferrer">GitHub <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a></footer>
+
+  <section class="tech" aria-labelledby="tech-title">
+    <div class="section-head"><span class="eyebrow">Under the hood</span><h2 id="tech-title" data-letters>Built for sounds that aren’t words.</h2></div>
+    <ol class="pipeline" aria-label="How Tink handles a sound">
+      <li><span class="step-n">01</span><b>Sound</b><small>A clip from the mic</small></li>
+      <li><span class="step-n">02</span><b>voc2vec</b><small>A model trained on non-verbal sounds</small></li>
+      <li><span class="step-n">03</span><b>Bayes</b><small>A confidence that can say “unknown”</small></li>
+      <li><span class="step-n">04</span><b>Voice</b><small>The phrase, out loud</small></li>
+    </ol>
+    <p class="measured"><span class="eyebrow">Measured</span> On real sounds from 8 minimally speaking people (ReCANVo), Tink picks the right meaning 27% of the time, against 19% by chance. Those were spontaneous sounds, not deliberate signals, so it is a hard test. <a class="arrow-link" href="https://github.com/hammy229/tink/blob/main/docs/accuracy.md" target="_blank" rel="noreferrer"><span>Read the method</span><span aria-hidden="true">→</span></a></p>
+  </section>
 </div>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand"><a href="#top"><svg class="footer-mark"><use href="#mark"/></svg><span>Tink</span></a><p>Sound-to-speech for people who can’t use words</p></div>
+    <div class="footer-links"><a href="#top">Home</a><span aria-hidden="true">·</span><a href="#how">How it works</a><span aria-hidden="true">·</span><a href="#demo">Try it</a><span aria-hidden="true">·</span><a href="#privacy">Privacy</a><span aria-hidden="true">·</span><a href="https://github.com/hammy229/tink" target="_blank" rel="noreferrer">GitHub</a></div>
+    <div class="footer-meta"><p>Built at HackTX ’26</p><p>Austin, TX</p></div>
+  </div>
+</footer>
 
 <script src="magic.js"></script>
 <script src="app.js"></script>
