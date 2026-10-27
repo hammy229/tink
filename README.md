@@ -1,5 +1,7 @@
 # Tink
 
+**Website:** [tink-quen.vercel.app](https://tink-quen.vercel.app/). The live app needs the model, so it runs on your laptop (see below).
+
 Tinker Bell can't speak in words. She talks in chimes, and Peter understands her.
 
 Tink does the same for people who can make sounds but not words: people losing their speech to ALS, stroke survivors, minimally speaking autistic people. It learns the sounds one person can make (a hum, two clicks, a sigh) and says out loud what each one means. A caregiver can answer back by typing, and Tink speaks the reply. For people who are losing their voice, there is message banking: while they can still speak, they record each phrase, and when Tink recognizes the sound it plays their recording instead of a computer voice. Everything runs on the laptop, and nothing is sent to any AI service by default.
