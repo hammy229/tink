@@ -1,27 +1,28 @@
-/* Tink: Silhouette Theatre. A warm theatre-black house around one backlit paper screen.
-   The person's sound is the light behind the screen; what it means is the shadow on it.
-   Each taught sound owns a film tint, and the screen takes that tint when the sound is heard. */
+/* Tink: paper and ink. A quiet editorial page around one screen that shows what a sound means.
+   Each taught sound owns a soft tint, and the screen takes that tint when the sound is heard. */
 :root {
-  --house: #071b17; --surface: #0d2a22; --surface-2: #12372b; --line: #284b3e;
-  --fg: #fff7df; --muted: #abc2b1; --control-line: #739680;
-  --ink: #071713;            /* Peter's shadow on the moonlit screen */
-  --paper: #fff5c7;          /* Tinker Bell's warm glow */
-  --paper-dim: #e9e3b9;      /* moonlit paper at rest */
-  --ash: #94a69b;            /* nothing matched */
-  --light: #ffd34f;          /* pixie-dust gold */
-  --miss: #f0907f;
-  --alarm: #ef6a5b;          /* urgent: ink on it 6.2:1 */
-  /* film tints, one per taught sound, in teaching order */
-  --t0: #ffd34f; --t1: #68d26f; --t2: #f18a78; --t3: #8be6b0; --t4: #b7e36f; --t5: #6dbfe8;
+  /* paper and ink: one off-white page, near-black type, hairline rules, a single red for hover */
+  --house: #fafaf7; --surface: #ffffff; --surface-2: #f3f3ee; --line: #e5e5e0;
+  --fg: #111111; --muted: #555555; --control-line: #b8b8b0;
+  --ink: #111111;            /* type on the screen */
+  --paper: #ffffff;          /* the screen while listening */
+  --paper-dim: #f3f3ee;      /* the screen at rest */
+  --ash: #d9d9d2;            /* nothing matched */
+  --light: #111111;          /* primary control fill */
+  --on-light: #fafaf7;       /* text on a primary control */
+  --hover: #c45c5c;
+  --grid: #d4d4cd;
+  --miss: #b4483f;
+  --alarm: #e0675b;          /* urgent: ink on it 5.3:1 */
+  /* screen tints, one per taught sound, in teaching order; all light enough for ink type */
+  --t0: #eadcae; --t1: #cfe0c8; --t2: #efcdc4; --t3: #cddcea; --t4: #e0d7ea; --t5: #dde6bd;
   --scrim: var(--paper-dim);
-  --display: "Gloock", "Bodoni 72", Georgia, serif;
-  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
-  --mono: "DM Mono", ui-monospace, Menlo, monospace;
-  --site-bg: #061426; --site-surface: #0b2230; --site-line: rgba(210, 239, 217, .16);
-  --violet: #49c66b; --violet-soft: #a8ef86; --mint: #82f0bc;
-  --r: 16px; --r-pill: 999px;
-  --ease: cubic-bezier(.16, 1, .3, 1);
-  color-scheme: dark;
+  --display: "Spectral", Georgia, serif;
+  --body: "Inter Tight", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --r: 12px; --r-pill: 999px;
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  color-scheme: light;
 }
 /* Increase Contrast: secondary text to full strength, every edge to control strength */
 @media (prefers-contrast: more) {
@@ -31,14 +32,14 @@
 * { box-sizing: border-box; }
 html { scrollbar-color: var(--control-line) transparent; }
 html { scroll-behavior: smooth; }
-body { margin: 0; background: var(--site-bg); color: var(--fg); font-family: var(--body); font-size: 17px; line-height: 1.55; caret-color: var(--light); accent-color: var(--light); overflow-x: hidden; }
-::selection { background: var(--light); color: var(--ink); }
+body { margin: 0; background: var(--site-bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.65; -webkit-font-smoothing: antialiased; caret-color: var(--light); accent-color: var(--light); overflow-x: hidden; }
+::selection { background: var(--ink); color: var(--on-light); }
 .wrap { max-width: 1340px; margin: 0 auto; padding: 18px 22px 56px; display: grid; gap: 20px; }
 h1, h2 { margin: 0; text-wrap: balance; }
 h2 { font-family: var(--body); font-weight: 700; font-size: 19px; letter-spacing: 0; }
 button, select { font: inherit; cursor: pointer; }
 button:disabled { opacity: .45; cursor: default; }
-:focus-visible { outline: 3px solid var(--light); outline-offset: 3px; border-radius: 10px; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 10px; }
 [hidden] { display: none !important; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .ph, .ph-fill { font-size: 1.15em; line-height: 1; }
@@ -62,7 +63,7 @@ body.speaking .top, body.speaking .side, body.speaking .lower, body.speaking .pa
 .select:focus-within { outline: 3px solid var(--light); outline-offset: 2px; }
 
 /* ---------- buttons ---------- */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border: 0; border-radius: var(--r-pill); padding: 11px 22px; font-weight: 700; background: var(--light); color: var(--ink); white-space: nowrap; transition: transform .15s var(--ease), background .2s, border-color .2s; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border: 0; border-radius: var(--r-pill); padding: 11px 22px; font-weight: 700; background: var(--light); color: var(--on-light); white-space: nowrap; transition: transform .15s var(--ease), background .2s, border-color .2s; }
 .btn:active:not(:disabled) { transform: translateY(1px) scale(.98); }
 .btn.quiet { background: transparent; color: var(--fg); border: 1px solid var(--control-line); }
 .btn.quiet:hover:not(:disabled) { border-color: var(--light); }
