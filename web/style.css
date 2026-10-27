@@ -256,6 +256,12 @@ form { display: grid; gap: 14px; }
 .cue.urgent { border-color: var(--alarm); color: var(--fg); }
 .err { color: var(--miss); font-size: 14.5px; min-height: 1.2em; margin: 0; }
 
+/* no server behind the page: only the screen stays, with the run instructions on it */
+body.no-server .side, body.no-server .lower, body.no-server .reply-panel, body.no-server .pad, body.no-server .guide, body.no-server .top-controls { display: none; }
+body.no-server .app-region .main { grid-template-columns: 1fr; }
+body.no-server .scrim { min-height: 360px; }
+.why code { display: inline-block; margin-top: 10px; padding: 8px 12px; font-family: var(--mono); font-size: 13px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow-wrap: anywhere; }
+
 /* ---------- profiles (public mode) ---------- */
 .profile-chip { display: flex; align-items: center; gap: 8px; padding-left: 12px; border-left: 1px solid var(--line); }
 .profile-chip > span { font-weight: 700; max-width: 14ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

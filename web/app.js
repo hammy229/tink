@@ -741,9 +741,12 @@
       if (profileId && isPublic) useProfile(profileId);
     } catch (e) {
       if (!NO_PROFILE.test(e.message)) {
-        setStage("error", "Offline");
-        phrase.textContent = "Tink can't reach its server.";
-        why.textContent = e.message;
+        // No server behind this page (a static copy, or the server is down): say how to run
+        // it instead of leaving controls that can only fail.
+        document.body.classList.add("no-server");
+        setStage("error", "Not running here");
+        phrase.textContent = "Tink runs on your laptop.";
+        why.innerHTML = 'There is no Tink server behind this page. The model is too big to host here, so run it yourself:<br><code>git clone https://github.com/hammy229/tink && cd tink && uv run uvicorn tink.app:app</code>';
         return;
       }
       // A dead or stale link: forget it, then try without one (a local Tink needs none).
