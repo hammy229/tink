@@ -6,7 +6,7 @@ Tink does the same for people who can make sounds but not words: people losing t
 
 How message banking works for ALS, and where each piece lives in the code: [docs/als.md](docs/als.md).
 
-Built at HackTX 26 on [voc2vec](https://ieeexplore.ieee.org/document/10890672) (Koudounas et al., ICASSP 2025), a speech model pretrained on 125 hours of non-verbal vocalizations.
+Made by [Arham Doshi](https://github.com/hammy229) at HackTX 26, on [voc2vec](https://ieeexplore.ieee.org/document/10890672) (Koudounas et al., ICASSP 2025), a speech model pretrained on 125 hours of non-verbal vocalizations.
 
 **Status:** finished weekend project (October 2026). The app runs end to end, but it has not been tested with nonspeaking users. On recorded sounds from 8 minimally speaking people ([ReCANVo](https://doi.org/10.5281/zenodo.5786860)), it guesses the meaning right 27% of the time against 19% chance: above chance, far from reliable. Details and what that means: [docs/accuracy.md](docs/accuracy.md). It is no longer under active development.
 
