@@ -675,21 +675,14 @@
   });
 
   // ---------- The light behind the screen ----------
-  // Drawn every frame from the mic level: a warm hotspot that swells with the voice and
-  // blooms when Tink understands. A faint paper fibre texture is generated once.
+  // Drawn every frame from the mic level: a soft hotspot that swells with the voice and
+  // blooms when Tink understands. The screen's grid is CSS, so no texture is drawn here.
   const cv = $("dust"), g = cv.getContext("2d");
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let W = 0, H = 0, glow = 0, bloom = 0, t = 0, fibres = null;
+  let W = 0, H = 0, glow = 0, bloom = 0, t = 0;
   function size() {
     const r = cv.getBoundingClientRect(), d = devicePixelRatio || 1;
     W = r.width; H = r.height; cv.width = W * d; cv.height = H * d; g.setTransform(d, 0, 0, d, 0, 0);
-    fibres = document.createElement("canvas"); fibres.width = W; fibres.height = H;
-    const f = fibres.getContext("2d");
-    f.strokeStyle = "rgba(21,17,14,.07)"; f.lineWidth = 1;
-    for (let i = 0; i < (W * H) / 900; i++) {
-      const x = Math.random() * W, y = Math.random() * H, a = Math.random() * Math.PI, l = 4 + Math.random() * 12;
-      f.beginPath(); f.moveTo(x, y); f.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); f.stroke();
-    }
     if (reduce) frame();
   }
   function burst() { bloom = 1; if (reduce) frame(); }
@@ -708,9 +701,8 @@
     light.addColorStop(1, "rgba(255,248,230,0)");
     g.fillStyle = light; g.fillRect(0, 0, W, H);
     const edge = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
-    edge.addColorStop(0, "rgba(21,17,14,0)"); edge.addColorStop(1, `rgba(21,17,14,${lit ? 0.3 : 0.14})`);
+    edge.addColorStop(0, "rgba(17,17,17,0)"); edge.addColorStop(1, `rgba(17,17,17,${lit ? 0.08 : 0.04})`);
     g.fillStyle = edge; g.fillRect(0, 0, W, H);
-    if (fibres) g.drawImage(fibres, 0, 0);
     if (!reduce) requestAnimationFrame(frame);
   }
   // the skyline drift is a loop nobody sees in a background tab

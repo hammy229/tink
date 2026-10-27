@@ -97,7 +97,7 @@
 <div class="app-region">
 <div class="wrap">
   <header class="top">
-    <div class="brand"><span class="app-mark" aria-hidden="true">✦</span><div><h2>Tink</h2><span class="tagline">speaks for them, in their voice</span></div></div>
+    <div class="brand"><svg class="app-mark" aria-hidden="true"><use href="#mark"/></svg><div><h2>Tink</h2><span class="tagline">speaks for them, in their voice</span></div></div>
     <div class="top-controls">
       <label class="select" for="speakIn" id="speakInBox" hidden><i class="ph ph-translate" aria-hidden="true"></i><span>Speak in</span><select id="speakIn" aria-label="Tink speaks in"></select></label>
       <span class="mode" id="mode">voc2vec</span>
@@ -115,15 +115,6 @@
     <section class="stage idle" id="stage" aria-label="Tink live translator">
       <div class="scrim" id="scrim">
       <canvas id="dust" aria-hidden="true"></canvas>
-      <svg class="skyline farther" viewBox="0 0 2400 120" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-        <path transform="translate(1200 0) scale(-1 1)" d="M0 120V92h40V80h30v15h40V70h8v-8h6v8h26v18h50V76h30V66h6v10h24v14h50V72h30V60l15-10 15 10v12h30v22h50V84h50V70h6V60h6v10h28v16h50v-8h50v14h50V74h30V64h6v10h34v14h40v-8h40V60h18V30l10-8 12-16 12 16 10 8v30h18v22h40V70h30V58l20-14 20 14v12h30v20h40V78h30V68h6v10h24v14h40v28Z"/><path transform="translate(2400 0) scale(-1 1)" d="M0 120V92h40V80h30v15h40V70h8v-8h6v8h26v18h50V76h30V66h6v10h24v14h50V72h30V60l15-10 15 10v12h30v22h50V84h50V70h6V60h6v10h28v16h50v-8h50v14h50V74h30V64h6v10h34v14h40v-8h40V60h18V30l10-8 12-16 12 16 10 8v30h18v22h40V70h30V58l20-14 20 14v12h30v20h40V78h30V68h6v10h24v14h40v28Z"/>
-      </svg>
-      <svg class="skyline far" viewBox="0 0 2400 120" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-        <path d="M0 120V92h40V80h30v15h40V70h8v-8h6v8h26v18h50V76h30V66h6v10h24v14h50V72h30V60l15-10 15 10v12h30v22h50V84h50V70h6V60h6v10h28v16h50v-8h50v14h50V74h30V64h6v10h34v14h40v-8h40V60h18V30l10-8 12-16 12 16 10 8v30h18v22h40V70h30V58l20-14 20 14v12h30v20h40V78h30V68h6v10h24v14h40v28Z"/><path transform="translate(1200 0)" d="M0 120V92h40V80h30v15h40V70h8v-8h6v8h26v18h50V76h30V66h6v10h24v14h50V72h30V60l15-10 15 10v12h30v22h50V84h50V70h6V60h6v10h28v16h50v-8h50v14h50V74h30V64h6v10h34v14h40v-8h40V60h18V30l10-8 12-16 12 16 10 8v30h18v22h40V70h30V58l20-14 20 14v12h30v20h40V78h30V68h6v10h24v14h40v28Z"/>
-      </svg>
-      <svg class="skyline" viewBox="0 0 1200 120" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
-        <path fill-rule="evenodd" d="M0 120V92h40V80h30v15h40V70h8v-8h6v8h26v18h50V76h30V66h6v10h24v14h50V72h30V60l15-10 15 10v12h30v22h50V84h50V70h6V60h6v10h28v16h50v-8h50v14h50V74h30V64h6v10h34v14h40v-8h40V60h18V30l10-8 12-16 12 16 10 8v30h18v22h40V70h30V58l20-14 20 14v12h30v20h40V78h30V68h6v10h24v14h40v28Z M872 42a8 8 0 1 0 16 0a8 8 0 1 0-16 0Z"/>
-      </svg>
 
       <div class="stage-top">
         <div class="status"><span class="bars" id="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span id="statusText">Ready</span></div>
