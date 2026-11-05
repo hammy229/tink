@@ -17,20 +17,24 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
+import numpy as np
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile, WebSocket
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.websockets import WebSocketDisconnect
 
 from . import audio, bayes, llm, schemas, turn
-from .embed import MODEL_ID
+from .embed import model_tag
 from .limits import RateLimiter, client_key
 from .profiles import MAX_SOUNDS, MAX_TAKES, PUBLIC, Profile, Profiles
 from .store import MAX_TEXT, MIN_SOUNDS, ROLES
+from .vad import SegmentDetector
 
 log = logging.getLogger("tink.turn")
 profiles = Profiles()
 MAX_UPLOAD = 2 * 1024 * 1024  # bytes; a 4 s clip at 48 kHz is about 400 KB
+MAX_STREAM_CHUNK = 64 * 1024  # bytes per WebSocket message, 2 s of 16 kHz PCM
 RATE = 90  # requests per minute per client, public mode only
 TRUST_PROXY = os.environ.get("TINK_TRUST_PROXY") == "1"  # set only behind a proxy you run (docker-compose does)
 _limiter = RateLimiter(RATE)
@@ -88,7 +92,7 @@ def _cues(raw: str) -> list[str]:
 @app.get("/healthz", response_model=schemas.Health)
 async def healthz():
     """Liveness. Never touches the model, so it answers even mid-inference."""
-    return {"status": "ok", "model": MODEL_ID, "profiles_loaded": len(profiles.loaded)}
+    return {"status": "ok", "model": model_tag(), "profiles_loaded": len(profiles.loaded)}
 
 
 @app.post("/api/profiles")
@@ -206,13 +210,48 @@ async def _take_turn(prof: Profile, wav, cues: list[str], speak_in: str) -> dict
     top = ranked[0]
     result = {
         "p": top["p"], "taught": sounds.phrase.get(top["name"]), "ranked": ranked, "scores": scores, "packet": packet,
-        "timing": timing, "voiced": sorted(n for n, s in store.sounds.items() if s.get("voice")), "model": MODEL_ID,
+        "timing": timing, "voiced": sorted(n for n, s in store.sounds.items() if s.get("voice")), "model": model_tag(),
         **outcome.fields,
     }
     # Numbers only: a person's phrases and sound names say too much to sit in a log file.
     log.info(json.dumps({"event": "turn", "source": result["source"], "matched": result["matched"], "p": result["p"],
-                         "sounds": len(sounds.phrase), "heard_ms": heard_ms, "model": MODEL_ID}))
+                         "sounds": len(sounds.phrase), "heard_ms": heard_ms, "model": model_tag()}))
     return result
+
+
+@app.websocket("/api/listen")
+async def listen(ws: WebSocket, p: str | None = Query(None), speak_in: str = Query("English")):
+    """Hands-free: send 16 kHz mono 16-bit PCM, get one JSON turn back per sound. For devices with no screen."""
+    peer = ws.client.host if ws.client else None
+    if PUBLIC and not _limiter.allow(client_key(ws.headers.get("x-forwarded-for"), peer, TRUST_PROXY)):
+        await ws.close(code=4429)
+        return
+    try:
+        prof = await run_in_threadpool(profiles.get, p)
+    except KeyError:
+        await ws.close(code=4404)
+        return
+    await ws.accept()
+    detector = SegmentDetector()
+    try:
+        while True:
+            chunk = await ws.receive_bytes()
+            if len(chunk) > MAX_STREAM_CHUNK:
+                await ws.close(code=1009)
+                return
+            pcm = np.frombuffer(chunk[: len(chunk) // 2 * 2], dtype=np.int16).astype(np.float32) / 32768
+            for sound in await run_in_threadpool(detector.push, pcm):
+                await ws.send_json(await _stream_turn(prof, sound, speak_in))
+    except WebSocketDisconnect:
+        return
+
+
+async def _stream_turn(prof: Profile, sound, speak_in: str) -> dict:
+    try:
+        async with prof.lock:
+            return await _take_turn(prof, audio.trim(sound), [], speak_in)
+    except HTTPException as e:  # not enough sounds taught yet: say so and keep listening
+        return {"error": e.detail}
 
 
 @app.post("/api/reply", response_model=schemas.ReplyResponse)
