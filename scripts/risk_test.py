@@ -1,9 +1,9 @@
 """Risk test: can frozen voc2vec embeddings tell one person's sounds apart?
 
 Record takes through the app (Teach a new sound) or drop WAVs into data/takes/<sound>/*.wav, then:
-    uv run python risk_test.py [data/takes]
-    uv run python risk_test.py --compare     # voc2vec vs HuBERT vs wav2vec2 on the same clips
-    uv run python risk_test.py --augment     # does augmenting each take help on these clips?
+    uv run python -m scripts.risk_test [data/takes]
+    uv run python -m scripts.risk_test --compare     # voc2vec vs HuBERT vs wav2vec2 on the same clips
+    uv run python -m scripts.risk_test --augment     # does augmenting each take help on these clips?
 
 For every layer, with and without centering, runs leave-one-out nearest-centroid and prints accuracy.
 Then prints the score spread at the best setting so you can pick TINK_LAYER and TINK_THRESHOLD.

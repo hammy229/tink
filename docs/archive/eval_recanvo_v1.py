@@ -18,7 +18,6 @@ import sys
 from pathlib import Path
 
 import numpy as np
-
 from risk_test import BASELINES, unit
 
 TAKES = 5            # what the app asks for
