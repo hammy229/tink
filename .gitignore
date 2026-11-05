@@ -12,3 +12,5 @@ data/
 htmlcov/
 models/
 *.onnx
+node_modules/
+e2e/artifacts/
