@@ -12,6 +12,7 @@ RECANVO_TAKES = 5  # what the app asks for
 RECANVO_MIN_CLIPS = 20  # a meaning needs this many clips to be scored
 RECANVO_TEST_PER_CLASS = 15  # so frequent meanings don't dominate
 WORD_WAYS, WORD_SHOTS = 5, 2
+LDA_SHRINKAGE = 0.5
 
 
 def unit(v: np.ndarray) -> np.ndarray:
@@ -64,6 +65,30 @@ def word_episode(labels: np.ndarray, _sessions: np.ndarray, rng: np.random.Gener
     return Episode(tuple(enroll), tuple(test))
 
 
+def session_word_options(labels: np.ndarray, sessions: np.ndarray) -> dict:
+    """For each word, the sessions with enough takes to enroll from and at least one take elsewhere to test on."""
+    options = {}
+    for w in set(labels):
+        idx = np.flatnonzero(labels == w)
+        good = sorted(s for s in set(sessions[idx])
+                      if (sessions[idx] == s).sum() >= WORD_SHOTS and (sessions[idx] != s).any())
+        if good:
+            options[w] = good
+    return options
+
+
+def word_episode_across_sessions(labels: np.ndarray, sessions: np.ndarray, rng: np.random.Generator) -> Episode:
+    """Teach once, use on another day, with deliberate sounds: the test takes come only from other sessions."""
+    options = session_word_options(labels, sessions)
+    enroll, test = [], []
+    for w in rng.choice(sorted(options), WORD_WAYS, replace=False):
+        idx = np.flatnonzero(labels == w)
+        s = rng.choice(options[w])
+        enroll.append(rng.choice(idx[sessions[idx] == s], WORD_SHOTS, replace=False))
+        test.append(idx[sessions[idx] != s])
+    return Episode(tuple(enroll), tuple(test))
+
+
 def usable_for_sessions(labels: np.ndarray, sessions: np.ndarray) -> np.ndarray:
     """Clips of meanings with enough data to enroll in one session and test in another."""
     keep = np.zeros(len(labels), bool)
@@ -99,9 +124,13 @@ def nearest(X: np.ndarray, y: np.ndarray, Q: np.ndarray) -> np.ndarray:
 
 
 def shrunk_lda(X: np.ndarray, y: np.ndarray, Q: np.ndarray) -> np.ndarray:
-    """Learn the person's own within-sound variation from their takes. Few takes, so heavy shrinkage."""
-    model = LinearDiscriminantAnalysis(solver="lsqr", shrinkage="auto").fit(X, y)
-    scores = model.decision_function(Q)
+    """Learn the person's own within-sound variation from their takes.
+
+    Shrinkage is fixed at 0.5 up front, not tuned on these benchmarks. shrinkage="auto" is unusable here: with 10 clips
+    in 768 dimensions it falls to chance, because Ledoit-Wolf on standardized features can't work with so few samples.
+    """
+    model = LinearDiscriminantAnalysis(solver="lsqr", shrinkage=LDA_SHRINKAGE).fit(X.astype(np.float64), y)
+    scores = model.decision_function(Q.astype(np.float64))
     return scores if scores.ndim == 2 else np.stack([-scores, scores], axis=1)
 
 

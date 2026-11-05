@@ -1,0 +1,42 @@
+{
+  "machine": "Darwin arm64",
+  "clip_seconds": 0.8,
+  "sounds": 3,
+  "takes_per_sound": 5,
+  "note": "one profile, so turns queue behind its lock by design",
+  "results": [
+    {
+      "clients": 1,
+      "requests": 15,
+      "errors": 0,
+      "throughput_rps": 56.92,
+      "p50_ms": 17.2,
+      "p95_ms": 18.0,
+      "p99_ms": 18.1,
+      "healthz_p95_ms": 2.1,
+      "healthz_max_ms": 2.3
+    },
+    {
+      "clients": 4,
+      "requests": 60,
+      "errors": 0,
+      "throughput_rps": 58.35,
+      "p50_ms": 64.6,
+      "p95_ms": 83.9,
+      "p99_ms": 84.9,
+      "healthz_p95_ms": 3.3,
+      "healthz_max_ms": 4.1
+    },
+    {
+      "clients": 16,
+      "requests": 240,
+      "errors": 0,
+      "throughput_rps": 55.93,
+      "p50_ms": 269.7,
+      "p95_ms": 352.9,
+      "p99_ms": 372.5,
+      "healthz_p95_ms": 3.8,
+      "healthz_max_ms": 12.3
+    }
+  ]
+}

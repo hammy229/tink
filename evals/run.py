@@ -6,8 +6,10 @@
 
 Benchmarks
   recanvo     spontaneous sounds; 5 takes per meaning; test only on other sessions
-  dysarthric  TORGO speakers with dysarthria; 5 words at a time, 2 takes per word
+  dysarthric  TORGO speakers with dysarthria; 5 words at a time, 2 takes per word, any session
   controls    TORGO matched controls; same task, shows what dysarthria costs
+  dysarthric_other_session, controls_other_session
+              the same, but tested only on takes from a different session: teach once, use on another day
 
 Promotion gate for the trained head, set before it was run: ship it only if it beats the app's method on BOTH recanvo
 and dysarthric with a paired 95% CI above zero.
@@ -28,6 +30,7 @@ from evals.embed import LOGMEL, MODELS, cache_path
 OUT = Path(__file__).parent / "results" / "report.json"
 PRIMARY = "voc2vec"
 APP_LAYER = 12
+TRAINING_POOL = ("recanvo", "dysarthric", "controls")  # the *_other_session benches reuse the same people
 
 
 @dataclass
@@ -52,16 +55,25 @@ def _build(args) -> list[Bench]:
     feats_r = {m: np.load(cache_path(recanvo, m), mmap_mode="r") for m in (LOGMEL, *MODELS)}
 
     torgo = load_torgo(args.torgo)
-    groups: dict[str, dict] = {"dysarthric": {}, "controls": {}}
+    groups: dict[str, dict] = {k: {} for k in ("dysarthric", "controls", "dysarthric_other_session",
+                                               "controls_other_session")}
     for p in sorted(set(torgo.people)):
         idx = np.flatnonzero(torgo.people == p)
         if len(set(torgo.labels[idx])) >= fewshot.WORD_WAYS:
-            groups["dysarthric" if is_dysarthric(p) else "controls"][p] = (idx, torgo.labels[idx], torgo.sessions[idx])
+            group = "dysarthric" if is_dysarthric(p) else "controls"
+            groups[group][p] = (idx, torgo.labels[idx], torgo.sessions[idx])
+            options = fewshot.session_word_options(torgo.labels[idx], torgo.sessions[idx])
+            if len(options) >= fewshot.WORD_WAYS:
+                groups[f"{group}_other_session"][p] = (idx, torgo.labels[idx], torgo.sessions[idx])
     feats_t = {m: np.load(cache_path(torgo, m), mmap_mode="r") for m in (LOGMEL, *MODELS)}
     return [
         Bench("recanvo", rec, fewshot.across_sessions, args.trials, feats_r),
         Bench("dysarthric", groups["dysarthric"], fewshot.word_episode, args.trials * 4, feats_t),
         Bench("controls", groups["controls"], fewshot.word_episode, args.trials * 4, feats_t),
+        Bench("dysarthric_other_session", groups["dysarthric_other_session"], fewshot.word_episode_across_sessions,
+              args.trials * 4, feats_t),
+        Bench("controls_other_session", groups["controls_other_session"], fewshot.word_episode_across_sessions,
+              args.trials * 4, feats_t),
     ]
 
 
@@ -156,7 +168,8 @@ def leave_one_person_out_head(benches: list[Bench], layer: int, seeds: tuple[int
             cfg = head.HeadConfig(seed=seed)
             heads = {}
             for held in b.people:
-                pool = {f"{o.name}/{p}": t for o in benches for p, t in _tasks(o, layer, {held}).items()}
+                pool = {f"{o.name}/{p}": t for o in benches if o.name in TRAINING_POOL
+                        for p, t in _tasks(o, layer, {held}).items()}
                 keys = sorted(pool)
                 val_key = np.random.default_rng(seed + fewshot.person_seed(held)).choice(
                     [k for k in keys if k.startswith(target)])

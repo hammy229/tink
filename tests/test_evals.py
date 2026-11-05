@@ -60,6 +60,23 @@ def test_word_episode_never_tests_on_an_enrolled_take():
             assert len(set(y[np.concatenate([enroll, test])])) == 1
 
 
+def test_other_session_words_never_test_in_the_enrollment_session():
+    _, y, sess = blobs(1.0)
+    rng = np.random.default_rng(0)
+    for _ in range(50):
+        ep = fewshot.word_episode_across_sessions(y, sess, rng)
+        assert len(ep.enroll) == fewshot.WORD_WAYS
+        for enroll, test in zip(ep.enroll, ep.test, strict=True):
+            assert len(enroll) == fewshot.WORD_SHOTS and len(set(sess[enroll])) == 1
+            assert not set(sess[enroll]) & set(sess[test])
+
+
+def test_word_needs_takes_in_two_sessions_to_count():
+    labels = np.array(["a", "a", "a", "b", "b", "b", "c", "c"])
+    sessions = np.array(["s1", "s1", "s2", "s1", "s1", "s1", "s1", "s2"])
+    assert fewshot.session_word_options(labels, sessions) == {"a": ["s1"]}
+
+
 def test_episodes_are_reproducible():
     _, y, sess = blobs(1.0)
     a = fewshot.word_episode(y, sess, np.random.default_rng(3))
