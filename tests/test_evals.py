@@ -91,6 +91,22 @@ def test_every_method_separates_easy_data(method):
     assert r["accuracy"] > 0.9
 
 
+def test_learning_from_confirmed_sounds_tracks_drift():
+    rng = np.random.default_rng(0)
+    means = rng.normal(size=(5, 16))
+    X, y, sess = [], [], []
+    for c in range(5):
+        for s, drift in (("s0", 0.0), ("s1", 3.0)):  # every sound moves between sessions, in its own direction
+            shift = rng.normal(size=16) * drift
+            X.append(means[c] * 2 + shift + rng.normal(size=(20, 16)))
+            y += [f"c{c}"] * 20
+            sess += [s] * 20
+    X, y, sess = np.concatenate(X).astype(np.float32), np.array(y), np.array(sess)
+    r = fewshot.run_adaptive(X, y, sess, fewshot.across_sessions, 0, 30)
+    assert r["adaptive"] > r["static"]
+    assert r["confirmed_clips_per_episode"] > 0
+
+
 def test_shuffled_labels_score_at_chance():
     X, y, sess = blobs(3.0)
     shuffled = np.random.default_rng(0).permutation(y)

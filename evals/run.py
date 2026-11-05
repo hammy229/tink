@@ -146,6 +146,25 @@ def uncertainty(benches: list[Bench]) -> dict:
     return out
 
 
+def adaptive(benches: list[Bench]) -> dict:
+    """Same gate as the head: ship learning from "Right" only if it wins on spontaneous and on deliberate sounds."""
+    out: dict = {}
+    for b in benches:
+        if b.name not in ("recanvo", "dysarthric_other_session", "controls_other_session"):
+            continue
+        per = {p: fewshot.run_adaptive(_matrix(b, PRIMARY, APP_LAYER, p), labels, sessions, b.episode,
+                                       fewshot.person_seed(p), b.trials)
+               for p, (_, labels, sessions) in b.people.items()}
+        static = np.array([r["static"] for r in per.values()])
+        grown = np.array([r["adaptive"] for r in per.values()])
+        out[b.name] = {"static": float(static.mean()), "adaptive": float(grown.mean()),
+                       "vs_static": metrics.beats(grown, static),
+                       "confirmed_clips_per_episode": float(np.mean([r["confirmed_clips_per_episode"]
+                                                                     for r in per.values()]))}
+    out["passes_gate"] = all(out[t]["vs_static"]["better"] for t in ("recanvo", "dysarthric_other_session"))
+    return out
+
+
 def _tasks(b: Bench, layer: int, exclude: set) -> dict:
     return {p: head.Task(torch.from_numpy(_matrix(b, PRIMARY, layer, p).copy()), labels, sessions, b.episode)
             for p, (_, labels, sessions) in b.people.items() if p not in exclude}
@@ -230,6 +249,7 @@ def main() -> None:
         "benchmarks": compare_models_and_methods(benches),
         "leakage_check": leakage_check(benches),
         "uncertainty": uncertainty(benches),
+        "adaptive": adaptive(benches),
         "head": leave_one_person_out_head(benches, args.head_layer, tuple(range(args.seeds))),
     }
     args.out.parent.mkdir(exist_ok=True)

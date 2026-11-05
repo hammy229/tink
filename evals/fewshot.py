@@ -158,6 +158,40 @@ def run_person(X, labels, sessions, method: Method, episode: EpisodeFn, seed: in
             "within_2": float((r <= 2).mean()), "within_3": float((r <= 3).mean())}
 
 
+def run_adaptive(X, labels, sessions, episode: EpisodeFn, seed: int, trials: int) -> dict:
+    """Does learning from confirmed sounds track drift? A caregiver's "Right" adds that clip to the sound.
+
+    Plays each episode's test clips in random order. Only a correct prediction gets added, since that's what "Right"
+    can confirm; wrong guesses teach nothing. Both policies are scored on the second half, on identical clips, so
+    the adaptive one is judged only on sounds it has never been given.
+    """
+    rng = np.random.default_rng(seed)
+    static_acc, adaptive_acc, added = [], [], []
+    for _ in range(trials):
+        ep = episode(labels, sessions, rng)
+        Xe = np.concatenate([X[i] for i in ep.enroll])
+        ye = np.concatenate([np.full(len(i), k) for k, i in enumerate(ep.enroll)])
+        order = rng.permutation(np.concatenate(ep.test))
+        by_clip = {int(i): k for k, idx in enumerate(ep.test) for i in idx}
+        yt = np.array([by_clip[int(i)] for i in order])
+        half = len(order) // 2
+        ways = len(ep.enroll)
+        if len({*yt[half:]}) < 2 or half == 0:
+            continue
+        grown_X, grown_y = Xe, ye
+        for i, truth in zip(order[:half], yt[:half], strict=True):
+            guess = centroid(grown_X, grown_y, X[i:i + 1]).argmax()
+            if guess == truth:
+                grown_X = np.concatenate([grown_X, X[i:i + 1]])
+                grown_y = np.append(grown_y, truth)
+        test_X = X[order[half:]]
+        static_acc.append(metrics.balanced_accuracy(centroid(Xe, ye, test_X), yt[half:], ways))
+        adaptive_acc.append(metrics.balanced_accuracy(centroid(grown_X, grown_y, test_X), yt[half:], ways))
+        added.append(len(grown_y) - len(ye))
+    return {"static": float(np.mean(static_acc)), "adaptive": float(np.mean(adaptive_acc)),
+            "confirmed_clips_per_episode": float(np.mean(added))}
+
+
 def _leave_one_take_out(Xe: np.ndarray, ye: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     rows = []
     for i in range(len(ye)):

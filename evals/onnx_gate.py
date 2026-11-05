@@ -41,7 +41,8 @@ def embed_all(ds, path: Path, cache: Path) -> np.ndarray:
     return out
 
 
-def compare(name: str, people: dict, reference: np.ndarray, exported: np.ndarray, layer: int, episode, trials: int) -> dict:
+def compare(name: str, people: dict, reference: np.ndarray, exported: np.ndarray, layer: int, episode,
+            trials: int) -> dict:
     ref, exp = {}, {}
     for p, (idx, labels, sessions) in people.items():
         seed = fewshot.person_seed(p)
@@ -67,7 +68,8 @@ def main() -> None:
     stem = args.model.stem
     exported_r = embed_all(recanvo, args.model, cache_path(recanvo, stem))
     exported_t = embed_all(torgo, args.model, cache_path(torgo, stem))
-    ref_r, ref_t = np.load(cache_path(recanvo, "voc2vec"), mmap_mode="r"), np.load(cache_path(torgo, "voc2vec"), mmap_mode="r")
+    ref_r = np.load(cache_path(recanvo, "voc2vec"), mmap_mode="r")
+    ref_t = np.load(cache_path(torgo, "voc2vec"), mmap_mode="r")
 
     rec = {}
     for p in sorted(set(recanvo.people)):
