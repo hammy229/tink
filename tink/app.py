@@ -61,7 +61,9 @@ async def _read(upload: UploadFile):
     if len(data) > MAX_UPLOAD:
         raise HTTPException(413, "That recording is too long. Keep each sound under a few seconds.")
     try:
-        return audio.load(data)
+        return audio.load_upload(data)
+    except audio.ClipTooLong as e:
+        raise HTTPException(413, "That recording is too long. Keep each sound under a few seconds.") from e
     except Exception as e:
         raise HTTPException(400, f"Could not read audio: {e}") from e
 

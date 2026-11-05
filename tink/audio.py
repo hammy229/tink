@@ -9,6 +9,19 @@ from scipy.signal import resample_poly
 
 SR = 16_000
 MIN_SECONDS = 0.4
+MAX_SECONDS = 30.0  # a banked phrase fits comfortably; compressed uploads can't decode past this
+
+
+class ClipTooLong(ValueError):
+    """The upload decodes to more audio than a single sound or phrase could need."""
+
+
+def load_upload(data: bytes) -> np.ndarray:
+    """load() for untrusted bytes: read the header first, so a tiny FLAC can't decode to hours of samples."""
+    info = sf.info(io.BytesIO(data))
+    if info.duration > MAX_SECONDS:
+        raise ClipTooLong(f"{info.duration:.0f} s is longer than the {MAX_SECONDS:.0f} s limit")
+    return load(data)
 
 
 def load(src: bytes | str | Path) -> np.ndarray:
