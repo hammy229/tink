@@ -2,5 +2,7 @@
 # TINK_DOMAIN can be <server-ip>.sslip.io until a real domain exists.
 {$TINK_DOMAIN} {
 	encode gzip
+	header Referrer-Policy no-referrer
+	header X-Content-Type-Options nosniff
 	reverse_proxy tink:8000
 }

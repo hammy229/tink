@@ -11,9 +11,11 @@ const ROOT = new URL("..", import.meta.url).pathname;
 const MODEL_FILE = process.env.TINK_E2E_MODEL || "voc2vec-l12.int8.onnx";
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".onnx": "application/octet-stream" };
 const ARTIFACTS = join(ROOT, "e2e", "artifacts");
+const HEADERS = JSON.parse(readFileSync(join(ROOT, "vercel.json"))).headers[0].headers; // the same ones production sends
 
 let server, browser, page, base, loadInfo;
 const requests = [];
+const cspViolations = [];
 
 // Serves the site the way vercel.json does: static files, no API, cross-origin isolated so WASM can use threads.
 function serve() {
@@ -21,8 +23,7 @@ function serve() {
     const s = createServer((req, res) => {
       const path = normalize(decodeURIComponent(new URL(req.url, "http://x").pathname));
       const file = path.startsWith("/models/") ? join(ROOT, path) : join(ROOT, "web", path === "/" ? "index.html" : path);
-      res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
-      res.setHeader("Cross-Origin-Embedder-Policy", "credentialless");
+      for (const { key, value } of HEADERS) res.setHeader(key, value);
       if (!existsSync(file) || !statSync(file).isFile()) { res.writeHead(404); res.end("{}"); return; }
       res.writeHead(200, { "Content-Type": TYPES[extname(file)] || "application/octet-stream" });
       res.end(readFileSync(file));
@@ -84,7 +85,7 @@ before(async () => {
   assert.ok(existsSync(join(ROOT, "models", MODEL_FILE)), `missing models/${MODEL_FILE}`);
   server = await serve();
   base = `http://127.0.0.1:${server.address().port}/`;
-  browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required"] });
+  browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required", "--mute-audio"] });
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   context.on("request", (r) => requests.push({ url: r.url(), method: r.method(), size: r.postDataBuffer()?.length ?? 0 }));
   await context.addInitScript(({ file, bytes }) => {
@@ -94,6 +95,7 @@ before(async () => {
   await context.addInitScript(fakeMic);
   page = await context.newPage();
   page.on("pageerror", (e) => { throw e; });
+  page.on("console", (m) => { if (/Content Security Policy/.test(m.text())) cspViolations.push(m.text()); });
 });
 
 after(async () => {
@@ -180,6 +182,10 @@ test("forgetting a sound removes it for good", async () => {
   await page.reload();
   await page.waitForFunction(() => window.__ready, null, { timeout: 120000 });
   assert.equal(await page.locator(".sound").count(), 2);
+});
+
+test("the content security policy doesn't block anything the app needs", () => {
+  assert.deepEqual(cspViolations, []);
 });
 
 test("a model that fails its hash is refused, and the page says so", async () => {
