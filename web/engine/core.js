@@ -8,6 +8,7 @@ export const UNKNOWN = "unknown";
 export const ROLES = ["yes", "no", "background"];
 export const MIN_SOUNDS = 2;
 export const MAX_TEXT = 80;
+export const MAX_LEARNED_TAKES = 30;
 export const DEFAULT_THRESHOLD = 0.5;
 export const DEFAULT_TEMP = 0.1;
 export const ASK_BELOW = 0.6;

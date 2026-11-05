@@ -205,6 +205,8 @@ async def _take_turn(prof: Profile, wav, cues: list[str], speak_in: str) -> dict
         outcome = turn.finish_turn(ranked, sounds, worded, now)
 
     prof.pending = outcome.pending
+    direct = outcome.fields["source"] in ("phrase", "grok", "urgent") and outcome.fields["matched"]
+    prof.heard = (outcome.fields["name"], wav) if direct and not outcome.fields["ask"] else None
     if outcome.said:
         prof.recent.append({"time": packet["time"], "said": outcome.said})
     top = ranked[0]
@@ -291,12 +293,16 @@ async def play_voice(name: str, prof: Profile = Depends(profile)):
 
 @app.post("/api/confirm")
 async def confirm(name: str = Form(...), prof: Profile = Depends(profile)):
-    """Someone pressed "Right": teach the time-of-day prior that this sound gets used now."""
+    """Someone pressed "Right": teach the time-of-day prior, and learn from the clip they just confirmed."""
     async with prof.lock:
         confirmed = await run_in_threadpool(prof.store.confirm, name, datetime.now().hour)
-    if not confirmed:
-        raise HTTPException(404, f"No sound called {name!r}.")
-    return {"ok": True, "usage": prof.store.usage.get(name, {})}
+        if not confirmed:
+            raise HTTPException(404, f"No sound called {name!r}.")
+        heard, prof.heard = prof.heard, None  # one confirmation teaches one clip, however many times it's pressed
+        learned = False
+        if heard and heard[0] == name:
+            learned = await run_in_threadpool(prof.store.learn_confirmed, name, heard[1])
+    return {"ok": True, "usage": prof.store.usage.get(name, {}), "learned": learned}
 
 
 @app.delete("/api/sounds/{name:path}")

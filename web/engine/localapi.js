@@ -159,6 +159,8 @@ export class LocalApi {
     const nowMs = now.getTime();
     const outcome = core.decideWithoutWording(ranked, view, this.pending, nowMs) ?? core.finishTurn(ranked, view, nowMs);
     this.pending = outcome.pending;
+    const direct = ["phrase", "urgent"].includes(outcome.fields.source) && outcome.fields.matched && !outcome.fields.ask;
+    this.heard = direct ? { name: outcome.fields.name, wav } : null;
     const top = ranked[0];
     return {
       p: top.p, taught: view.phrase[top.name] ?? null, ranked, scores: sc,
@@ -193,8 +195,22 @@ export class LocalApi {
     const bucket = core.partOfDay(new Date().getHours());
     usage[name] ??= {};
     usage[name][bucket] = (usage[name][bucket] ?? 0) + 1;
+    const heard = this.heard;
+    this.heard = null; // one confirmation teaches one clip, however many times it's pressed
+    const learned = Boolean(heard && heard.name === name) && await this.learnConfirmed(name, heard.wav);
     await this.save();
-    return { ok: true, usage: usage[name] };
+    return { ok: true, usage: usage[name], learned };
+  }
+
+  // Same rule as Store.learn_confirmed: sounds drift between days, and confirmed clips track the drift.
+  async learnConfirmed(name, wav) {
+    const { sounds, vecs } = this.state;
+    if (sounds[name].role === "background" || vecs[name].length >= core.MAX_LEARNED_TAKES) return false;
+    const rows = [];
+    for (const variant of [wav, ...core.augment(wav)]) rows.push(await this.embed(variant));
+    vecs[name].push(rows);
+    this.calib = core.calibrate(vecs);
+    return true;
   }
 
   async forget(name) {

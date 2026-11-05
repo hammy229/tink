@@ -37,6 +37,7 @@ AUGMENT = os.environ.get("TINK_AUGMENT", "1") != "0"
 TEMPS = np.geomspace(0.04, 1.0, 50)  # floor: a handful of easy takes must not make Tink certain
 MIN_SOUNDS = 2  # centering needs two sounds; with one, every clip looks like a match
 MAX_TEXT = 80
+MAX_LEARNED_TAKES = 30  # stop growing a sound here: self-tests get slower, and more takes stop helping
 ROLES = ("yes", "no", "background")  # yes/no answer Tink's questions; background is the room itself
 
 
@@ -156,6 +157,15 @@ class Store:
         self._save()
         self.calibrate()
         return len(s["takes"])
+
+    def learn_confirmed(self, name: str, wav: np.ndarray) -> bool:
+        """Someone confirmed Tink heard this sound right, so keep the clip. Sounds drift between days, and
+        evals/run.py shows this tracks the drift. Returns False when there's nothing to do."""
+        s = self.sounds.get(name)
+        if not s or s.get("role") == "background" or len(s["takes"]) >= MAX_LEARNED_TAKES:
+            return False
+        self.add_take(name, s["phrase"], wav, None, None, None)
+        return True
 
     # Message banking: the person records the phrase in their own voice while they still can,
     # and Tink plays that recording instead of a synthetic voice.
