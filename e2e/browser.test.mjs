@@ -13,7 +13,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
 const ARTIFACTS = join(ROOT, "e2e", "artifacts");
 const HEADERS = JSON.parse(readFileSync(join(ROOT, "vercel.json"))).headers[0].headers; // the same ones production sends
 
-let server, browser, page, base, loadInfo;
+let server, browser, page, base, loadInfo, embedMs;
 const requests = [];
 const cspViolations = [];
 
@@ -85,7 +85,7 @@ before(async () => {
   assert.ok(existsSync(join(ROOT, "models", MODEL_FILE)), `missing models/${MODEL_FILE}`);
   server = await serve();
   base = `http://127.0.0.1:${server.address().port}/`;
-  browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required", "--mute-audio"] });
+  browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required", "--disable-audio-output"] });
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   context.on("request", (r) => requests.push({ url: r.url(), method: r.method(), size: r.postDataBuffer()?.length ?? 0 }));
   await context.addInitScript(({ file, bytes }) => {
@@ -133,6 +133,7 @@ test("a person can teach sounds and be understood", async () => {
   }
   mkdirSync(ARTIFACTS, { recursive: true });
   await page.locator("#stage").screenshot({ path: join(ARTIFACTS, "understood.png") });
+  embedMs = await page.evaluate(() => window.__ready.timings);
 });
 
 test("pressing Right teaches Tink the clip it just heard", async () => {
@@ -204,7 +205,9 @@ test("a model that fails its hash is refused, and the page says so", async () =>
 
 test("record how fast it ran", async () => {
   const stats = await page.evaluate(() => ({ threads: window.__ready.threads, isolated: self.crossOriginIsolated }));
+  const sorted = [...embedMs].sort((x, y) => x - y);
+  const at = (q) => Math.round(sorted[Math.floor(q * (sorted.length - 1))]);
   mkdirSync(ARTIFACTS, { recursive: true });
-  writeFileSync(join(ARTIFACTS, "browser-timing.json"), JSON.stringify({ first_load: loadInfo, ...stats }, null, 2));
+  writeFileSync(join(ARTIFACTS, "browser-timing.json"), JSON.stringify({ first_load: loadInfo, ...stats, embeddings: embedMs.length, embed_ms_p50: at(0.5), embed_ms_p95: at(0.95) }, null, 2));
   assert.equal(stats.isolated, true);
 });
