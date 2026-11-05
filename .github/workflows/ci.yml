@@ -46,3 +46,38 @@ jobs:
           path: ~/.cache/huggingface
           key: hf-voc2vec-hubert-ls-pt-v1
       - run: uv run pytest --cov --cov-report=term-missing --cov-fail-under=85
+
+  web:
+    name: Browser engine parity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test web/engine/
+
+  e2e:
+    name: Real model in real Chromium
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Find the published model
+        id: model
+        run: |
+          url=$(sed -n 's/.*url: "\(.*\)".*/\1/p' web/engine/config.js)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          curl -fsIL "$url" > /dev/null && echo "found=true" >> "$GITHUB_OUTPUT" || echo "found=false" >> "$GITHUB_OUTPUT"
+      - if: steps.model.outputs.found == 'true'
+        name: Run the browser test
+        env:
+          MODEL_URL: ${{ steps.model.outputs.url }}
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          mkdir -p models
+          curl -fsSL "$MODEL_URL" -o models/voc2vec-l12.int8.onnx
+          node --test --test-timeout=600000 e2e/
