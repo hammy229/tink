@@ -1,55 +1,64 @@
 """Tink API. Run: uv run uvicorn tink.app:app --reload  then open http://localhost:8000
 
-Each turn: mic clip -> voc2vec scores -> Bayesian posterior (time of day, webcam cues)
--> JSON packet -> Grok -> what Tink says, in the listener's language.
+Each turn: mic clip -> voc2vec scores -> Bayesian posterior (time of day, webcam cues) -> tink.turn decides.
 
 Every request belongs to one profile (tink/profiles.py), sent as the X-Tink-Profile header or ?p=.
 Locally there is one profile and no header is needed; TINK_PUBLIC=1 turns on profiles for a hosted demo.
 
-Routes are `async def` on purpose: apart from the LLM call they never await while touching a Store,
-so on uvicorn's single event loop they run one at a time and can't interleave mid-mutation.
+Concurrency: model calls and disk writes run on worker threads so the event loop stays free, and each profile
+has a lock, so one person's turns run in order while other people's keep going.
 """
 import json
+import logging
+import os
 import time
-from collections import defaultdict, deque
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import audio, bayes, llm
+from . import audio, bayes, llm, schemas, turn
+from .embed import MODEL_ID
+from .limits import RateLimiter, client_key
 from .profiles import MAX_SOUNDS, MAX_TAKES, PUBLIC, Profile, Profiles
 from .store import MAX_TEXT, MIN_SOUNDS, ROLES
 
-app = FastAPI(title="Tink")
+log = logging.getLogger("tink.turn")
 profiles = Profiles()
-if not PUBLIC:
-    profiles.get(None)  # load the model and the local takes at startup
-ASK_BELOW = 0.6  # top probability under this means Tink asks instead of saying
-DIALOG_SECONDS = 45  # how long a yes/no question stays open
-ANSWER_MIN = 0.6  # a yes or no sound must be at least this sure to answer a question
-URGENT_MIN = 0.4  # urgent sounds alert at lower confidence: a missed alarm costs more than a false one
 MAX_UPLOAD = 2 * 1024 * 1024  # bytes; a 4 s clip at 48 kHz is about 400 KB
 RATE = 90  # requests per minute per client, public mode only
-_hits: dict[str, deque] = defaultdict(deque)
+TRUST_PROXY = os.environ.get("TINK_TRUST_PROXY") == "1"  # set only behind a proxy you run (docker-compose does)
+_limiter = RateLimiter(RATE)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    if not PUBLIC:
+        await run_in_threadpool(profiles.get, None)  # load the model and the local takes before the first request
+    yield
+
+
+app = FastAPI(title="Tink", summary="Few-shot recognition of one person's non-word sounds.", lifespan=lifespan)
 
 
 @app.middleware("http")
 async def rate_limit(request: Request, call_next):
     if PUBLIC and request.url.path.startswith("/api/"):
-        ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "?").split(",")[0]
-        now, q = time.monotonic(), _hits[ip]
-        while q and now - q[0] > 60:
-            q.popleft()
-        if len(q) >= RATE:
+        peer = request.client.host if request.client else None
+        key = client_key(request.headers.get("x-forwarded-for"), peer, TRUST_PROXY)
+        if not _limiter.allow(key):
             return JSONResponse({"detail": "Too many requests. Wait a minute and try again."}, status_code=429)
-        q.append(now)
     return await call_next(request)
 
 
 def profile(x_tink_profile: str | None = Header(None), p: str | None = Query(None)) -> Profile:
+    # A plain def, so FastAPI runs it on a worker thread: a first load can embed many takes.
     try:
         return profiles.get(x_tink_profile or p)
     except KeyError as e:
@@ -61,7 +70,7 @@ async def _read(upload: UploadFile):
     if len(data) > MAX_UPLOAD:
         raise HTTPException(413, "That recording is too long. Keep each sound under a few seconds.")
     try:
-        return audio.load_upload(data)
+        return await run_in_threadpool(audio.load_upload, data)
     except audio.ClipTooLong as e:
         raise HTTPException(413, "That recording is too long. Keep each sound under a few seconds.") from e
     except Exception as e:
@@ -76,14 +85,10 @@ def _cues(raw: str) -> list[str]:
     return [c for c in out if c in bayes.CUES] if isinstance(out, list) else []
 
 
-def _fallback(ranked: list[dict], phrase: dict[str, str]) -> dict:
-    """What Tink says with no LLM: the phrase, an either/or question, or ask to try again."""
-    top, second = ranked[0], (ranked[1] if len(ranked) > 1 else None)
-    if top["name"] == bayes.UNKNOWN or top["name"] not in phrase:
-        return {"say": "I didn't catch that. Can you make the sound again?", "ask": True}
-    if top["p"] < ASK_BELOW and second and second["name"] in phrase:
-        return {"say": f'Do you mean "{phrase[top["name"]]}" or "{phrase[second["name"]]}"?', "ask": True}
-    return {"say": phrase[top["name"]], "ask": False}
+@app.get("/healthz", response_model=schemas.Health)
+async def healthz():
+    """Liveness. Never touches the model, so it answers even mid-inference."""
+    return {"status": "ok", "model": MODEL_ID, "profiles_loaded": len(profiles.loaded)}
 
 
 @app.post("/api/profiles")
@@ -92,7 +97,7 @@ async def create_profile(name: str = Form(...)):
     if not name:
         raise HTTPException(400, "Give the profile a name, like the person's first name.")
     try:
-        prof = profiles.create(name)
+        prof = await run_in_threadpool(profiles.create, name)
     except OverflowError as e:
         raise HTTPException(503, str(e)) from e
     return {"id": prof.id, "name": prof.name}
@@ -103,11 +108,13 @@ async def whoami(prof: Profile = Depends(profile)):
     return {"id": prof.id, "name": prof.name, "public": PUBLIC}
 
 
-@app.get("/api/sounds")
+@app.get("/api/sounds", response_model=schemas.SoundsResponse)
 async def sounds(prof: Profile = Depends(profile)):
     store = prof.store
+    async with prof.lock:
+        listed = store.all()
     return {
-        "sounds": store.all(),
+        "sounds": listed,
         "threshold": store.threshold,
         "calibration": store.calib,
         "min_sounds": MIN_SOUNDS,
@@ -117,7 +124,7 @@ async def sounds(prof: Profile = Depends(profile)):
     }
 
 
-@app.post("/api/enroll")
+@app.post("/api/enroll", response_model=schemas.EnrollResponse)
 async def enroll(
     name: str = Form(...),
     phrase: str = Form(...),
@@ -140,102 +147,75 @@ async def enroll(
     wav = await _read(audio_file)
     if audio.is_silent(wav) and role != "background":  # a quiet room is a valid background take
         raise HTTPException(400, "Tink didn't hear a sound in that take. Move closer to the mic and try again.")
-    takes = store.add_take(name, phrase, wav, _cues(cues), role if role in ROLES else "", urgent)
+    async with prof.lock:
+        takes = await run_in_threadpool(store.add_take, name, phrase, wav, _cues(cues), role if role in ROLES else "",
+                                        urgent)
     return {"name": name, "takes": takes}
 
 
-@app.post("/api/recognize")
+@app.post("/api/recognize", response_model=schemas.RecognizeResponse, response_model_exclude_unset=True)
 async def recognize(
     cues: str = Form("[]"),
     speak_in: str = Form("English"),
     audio_file: UploadFile = File(..., alias="audio"),
     prof: Profile = Depends(profile),
 ):
+    wav = await _read(audio_file)
+    async with prof.lock:
+        return await _take_turn(prof, wav, _cues(cues), speak_in)
+
+
+async def _take_turn(prof: Profile, wav, cues: list[str], speak_in: str) -> dict:
     store = prof.store
     t0 = time.perf_counter()
-    wav = await _read(audio_file)
-    phrase = {n: s["phrase"] for n, s in store.sounds.items()}  # snapshot: a Forget mid-request can't break this turn
-    scores = store.scores(wav)
+    sounds = turn.Sounds(
+        phrase={n: s["phrase"] for n, s in store.sounds.items()},
+        roles={n: s["role"] for n, s in store.sounds.items() if s.get("role")},
+        urgent=frozenset(n for n in store.sounds if store.is_urgent(n)),
+    )
+    scores = await run_in_threadpool(store.scores, wav)
     if not scores:
         raise HTTPException(409, f"Teach Tink at least {MIN_SOUNDS} sounds first, so it can tell them apart.")
     now = datetime.now()
-    post = bayes.posterior(scores, store.threshold, store.usage, store.cues(), _cues(cues), now.hour,
+    post = bayes.posterior(scores, store.threshold, store.usage, store.cues(), cues, now.hour,
                            temp=store.temp or bayes.TEMP)
     ranked = post["ranked"]
     heard_ms = round((time.perf_counter() - t0) * 1000)
+    timing: dict = {"heard_ms": heard_ms}
 
     packet = {
         "time": now.strftime("%H:%M"),
         "part_of_day": post["part_of_day"],
         "speak_in": speak_in.strip()[:30] or "English",
         "candidates": [
-            {"sound": r["name"], "means": phrase.get(r["name"], "(no match)"), "p": r["p"]} for r in ranked[:3]
+            {"sound": r["name"], "means": sounds.phrase.get(r["name"], "(no match)"), "p": r["p"]} for r in ranked[:3]
         ],
         "webcam_cues": post["cues"],
         "recent": list(prof.recent),
     }
+    outcome = turn.decide_without_wording(ranked, sounds, prof.pending, now)
+    if outcome is None:
+        t1 = time.perf_counter()
+        worded = await llm.compose(packet)
+        timing["llm_ms"] = round((time.perf_counter() - t1) * 1000) if llm.KEY else None
+        outcome = turn.finish_turn(ranked, sounds, worded, now)
+
+    prof.pending = outcome.pending
+    if outcome.said:
+        prof.recent.append({"time": packet["time"], "said": outcome.said})
     top = ranked[0]
-    matched = top["name"] != bayes.UNKNOWN and top["name"] in phrase
-    voiced = {n for n, s in store.sounds.items() if s.get("voice")}
-    base = {"p": top["p"], "taught": phrase.get(top["name"]), "ranked": ranked, "scores": scores, "packet": packet,
-            "timing": {"heard_ms": heard_ms}, "voiced": sorted(voiced)}
-
-    # The room itself: stay quiet and don't disturb an open question.
-    if matched and store.role_of(top["name"]) == "background":
-        return {**base, "matched": False, "name": None, "say": "", "ask": False, "source": "background",
-                "background": True, "taught": None, "dialog": None}
-
-    # Urgent sounds skip the LLM and the questions, and alert even when Tink is less sure.
-    urgent = next((r for r in ranked if store.is_urgent(r["name"]) and r["p"] >= URGENT_MIN), None)
-    if urgent and urgent["name"] in phrase:
-        prof.pending = None
-        prof.recent.append({"time": packet["time"], "said": phrase[urgent["name"]]})
-        return {**base, "p": urgent["p"], "matched": True, "name": urgent["name"], "say": phrase[urgent["name"]],
-                "ask": False, "source": "urgent", "urgent": True, "taught": phrase[urgent["name"]], "dialog": None}
-
-    # An open yes/no question, answered with the person's own yes or no sound.
-    pending = prof.pending
-    role = store.role_of(top["name"]) if matched and top["p"] >= ANSWER_MIN else None
-    if pending and role and (now - pending["at"]).total_seconds() < DIALOG_SECONDS:
-        asked = pending["options"][pending["i"]]
-        if role == "yes" and asked in phrase:
-            prof.pending = None
-            prof.recent.append({"time": packet["time"], "said": phrase[asked]})
-            return {**base, "matched": True, "name": asked, "say": phrase[asked], "ask": False, "source": "dialog",
-                    "taught": phrase[asked], "dialog": {"answered": "yes", "meant": asked}}
-        pending["i"] += 1
-        pending["at"] = now
-        nxt = pending["options"][pending["i"]] if pending["i"] < len(pending["options"]) else None
-        if nxt in phrase:
-            return {**base, "matched": False, "name": None, "say": f'Do you mean "{phrase[nxt]}"?', "ask": True,
-                    "source": "dialog", "dialog": {"answered": "no", "asking": nxt}}
-        prof.pending = None
-        return {**base, "matched": False, "name": None, "say": "Okay. Make the sound again when you're ready.",
-                "ask": True, "source": "dialog", "dialog": {"answered": "no"}}
-
-    t1 = time.perf_counter()
-    out = await llm.compose(packet)
-    base["timing"]["llm_ms"] = round((time.perf_counter() - t1) * 1000) if llm.KEY else None
-    source = "grok" if out else "phrase"
-    out = out or _fallback(ranked, phrase)
-    if not matched or top["p"] < ASK_BELOW:
-        out["ask"] = True  # never let wording turn an unsure guess into a statement
-
-    dialog = None
-    prof.pending = None
-    if out["ask"] and store.has_yes_no():
-        options = [r["name"] for r in ranked if r["name"] in phrase and not store.role_of(r["name"])][:3]
-        if options:
-            prof.pending = {"options": options, "i": 0, "at": now}
-            out = {"say": f'Do you mean "{phrase[options[0]]}"?', "ask": True}
-            source, dialog = "dialog", {"asking": options[0]}
-    if not out["ask"]:
-        prof.recent.append({"time": packet["time"], "said": out["say"]})
-    return {**base, "matched": matched, "name": top["name"] if matched else None,
-            "say": out["say"], "ask": out["ask"], "source": source, "dialog": dialog}
+    result = {
+        "p": top["p"], "taught": sounds.phrase.get(top["name"]), "ranked": ranked, "scores": scores, "packet": packet,
+        "timing": timing, "voiced": sorted(n for n, s in store.sounds.items() if s.get("voice")), "model": MODEL_ID,
+        **outcome.fields,
+    }
+    # Numbers only: a person's phrases and sound names say too much to sit in a log file.
+    log.info(json.dumps({"event": "turn", "source": result["source"], "matched": result["matched"], "p": result["p"],
+                         "sounds": len(sounds.phrase), "heard_ms": heard_ms, "model": MODEL_ID}))
+    return result
 
 
-@app.post("/api/reply")
+@app.post("/api/reply", response_model=schemas.ReplyResponse)
 async def reply(text: str = Form(...), to: str = Form("English"), prof: Profile = Depends(profile)):
     """Caregiver answer-back: translate what they typed into the person's language and say it."""
     text, to = text.strip(), (to.strip()[:30] or "English")
@@ -255,7 +235,9 @@ async def bank_voice(name: str = Form(...), audio_file: UploadFile = File(..., a
     wav = await _read(audio_file)
     if audio.is_silent(wav):
         raise HTTPException(400, "Tink didn't hear the phrase. Move closer to the mic and try again.")
-    if not prof.store.set_voice(name, wav):
+    async with prof.lock:
+        banked = await run_in_threadpool(prof.store.set_voice, name, wav)
+    if not banked:
         raise HTTPException(404, f"No sound called {name!r}.")
     return {"ok": True, "name": name}
 
@@ -271,14 +253,18 @@ async def play_voice(name: str, prof: Profile = Depends(profile)):
 @app.post("/api/confirm")
 async def confirm(name: str = Form(...), prof: Profile = Depends(profile)):
     """Someone pressed "Right": teach the time-of-day prior that this sound gets used now."""
-    if not prof.store.confirm(name, datetime.now().hour):
+    async with prof.lock:
+        confirmed = await run_in_threadpool(prof.store.confirm, name, datetime.now().hour)
+    if not confirmed:
         raise HTTPException(404, f"No sound called {name!r}.")
     return {"ok": True, "usage": prof.store.usage.get(name, {})}
 
 
 @app.delete("/api/sounds/{name:path}")
 async def forget(name: str, prof: Profile = Depends(profile)):
-    if not prof.store.delete(name):
+    async with prof.lock:
+        deleted = await run_in_threadpool(prof.store.delete, name)
+    if not deleted:
         raise HTTPException(404, f"No sound called {name!r}.")
     return {"ok": True}
 

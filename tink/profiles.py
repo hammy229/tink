@@ -8,16 +8,19 @@ Layout in public mode:
     data/profiles/<id>/profile.json   {"name": "Maya", "created": "2026-10-24T16:05"}
     data/profiles/<id>/sounds.json, usage.json, takes/...   (the same layout Store uses)
 """
+import asyncio
 import json
 import os
 import re
 import secrets
+import threading
 from collections import OrderedDict, deque
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
 from .store import DATA, Store
+from .turn import Pending
 
 PUBLIC = os.environ.get("TINK_PUBLIC") == "1"
 LOCAL = "local"
@@ -34,14 +37,15 @@ class Profile:
     name: str
     store: Store
     recent: deque = field(default_factory=lambda: deque(maxlen=5))  # what Tink said lately, for the LLM
-    # An open yes/no question: {"options": [sound names, best first], "i": index asked about, "at": datetime}
-    pending: dict | None = None
+    pending: Pending | None = None  # an open yes/no question
+    lock: asyncio.Lock = field(default_factory=asyncio.Lock)  # one turn at a time, per person
 
 
 class Profiles:
     def __init__(self, root: Path = DATA):
         self.root = root
         self.loaded: OrderedDict[str, Profile] = OrderedDict()
+        self._lock = threading.RLock()  # requests load profiles from worker threads; two Stores would lose writes
 
     def _dir(self, pid: str) -> Path:
         return self.root if pid == LOCAL else self.root / "profiles" / pid
@@ -51,6 +55,10 @@ class Profiles:
         return sum(1 for p in d.iterdir() if (p / "profile.json").exists()) if d.exists() else 0
 
     def create(self, name: str) -> Profile:
+        with self._lock:
+            return self._create(name)
+
+    def _create(self, name: str) -> Profile:
         if self.count() >= MAX_PROFILES:
             raise OverflowError("This Tink server is full. Try again later or run Tink on your own laptop.")
         pid = secrets.token_urlsafe(12)
@@ -62,6 +70,10 @@ class Profiles:
 
     def get(self, pid: str | None) -> Profile:
         """The profile for an id. No id means the local profile, which public mode does not have."""
+        with self._lock:
+            return self._get(pid)
+
+    def _get(self, pid: str | None) -> Profile:
         if not pid:
             if PUBLIC:
                 raise KeyError("Create a profile first.")

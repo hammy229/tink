@@ -1,6 +1,6 @@
 """Tests for the parts the live demo depends on. Uses synthetic tones, so no recordings are needed.
 
-    uv run pytest -q
+    uv run pytest
 """
 import io
 
@@ -8,25 +8,8 @@ import numpy as np
 import pytest
 import soundfile as sf
 
+from tests.helpers import hiss, tone
 from tink import bayes, llm
-
-
-def tone(freq: float, seconds: float = 0.8, sr: int = 16_000, noise: float = 0.003, seed: int = 0) -> bytes:
-    rng = np.random.default_rng(seed)
-    t = np.arange(int(sr * seconds)) / sr
-    wav = 0.5 * np.sin(2 * np.pi * freq * t) * np.hanning(len(t)) + rng.normal(0, noise, len(t))
-    buf = io.BytesIO()
-    sf.write(buf, wav.astype(np.float32), sr, format="WAV")
-    return buf.getvalue()
-
-
-def hiss(seconds: float = 0.8, sr: int = 16_000, seed: int = 0) -> bytes:
-    rng = np.random.default_rng(seed)
-    wav = rng.normal(0, 0.3, int(sr * seconds)) * np.hanning(int(sr * seconds))
-    buf = io.BytesIO()
-    sf.write(buf, wav.astype(np.float32), sr, format="WAV")
-    return buf.getvalue()
-
 
 # ---------- bayes ----------
 
@@ -139,7 +122,7 @@ def test_store_survives_a_lost_take(client):
 
 def test_yes_no_dialogue_resolves_an_unsure_guess(client, monkeypatch):
     c, app_module, _ = client
-    monkeypatch.setattr(app_module, "ASK_BELOW", 1.01)  # make every ordinary match a question
+    monkeypatch.setattr(app_module.turn, "ASK_BELOW", 1.01)  # make every ordinary match a question
     for i in range(3):
         enroll(c, "Hum", tone(140, seed=i), "I'm thirsty.")
         enroll(c, "Hiss", hiss(seed=i), "I'm cold.")
@@ -187,7 +170,7 @@ def test_quiet_room_is_a_valid_background_take(client):
 
 def test_urgent_sound_alerts_and_skips_the_question(client, monkeypatch):
     c, app_module, _ = client
-    monkeypatch.setattr(app_module, "ASK_BELOW", 1.01)  # an ordinary match would become a question
+    monkeypatch.setattr(app_module.turn, "ASK_BELOW", 1.01)  # an ordinary match would become a question
     for i in range(3):
         enroll(c, "Hum", tone(140, seed=i), "I'm thirsty.")
         c.post("/api/enroll", data={"name": "Scream", "phrase": "Help, it hurts!", "urgent": "true"},
