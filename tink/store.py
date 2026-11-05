@@ -29,8 +29,7 @@ import numpy as np
 
 from . import audio
 from .bayes import CUES, part_of_day
-from .embed import LAYER as EMBED_LAYER
-from .embed import MODEL_ID, embed
+from .embed import embed, model_tag
 
 DATA = Path(os.environ.get("TINK_DATA", "data"))
 THRESHOLD = float(os.environ.get("TINK_THRESHOLD", "0.5"))  # fallback until calibration has enough takes
@@ -70,7 +69,7 @@ def atomic_write(path: Path, data: bytes) -> None:
 
 def cache_tag() -> str:
     """Names what produced an embedding. Anything that changes the vectors must change this."""
-    raw = f"{MODEL_ID}|{EMBED_LAYER}|{AUGMENT}|v1"
+    raw = f"{model_tag()}|{AUGMENT}|v1"
     return hashlib.sha256(raw.encode()).hexdigest()[:12]
 
 
