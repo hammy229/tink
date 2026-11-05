@@ -1,134 +1,137 @@
 # Tink
 
-**Website:** [tink-quen.vercel.app](https://tink-quen.vercel.app/). The live app needs the model, so it runs on your laptop (see below).
+[![CI](https://github.com/hammy229/tink/actions/workflows/ci.yml/badge.svg)](https://github.com/hammy229/tink/actions/workflows/ci.yml)
 
-Tinker Bell can't speak in words. She talks in chimes, and Peter understands her.
+**[Try it in your browser](https://tink-quen.vercel.app/#demo).** No install and no account. The model runs on your device, so no audio is uploaded.
 
-Tink does the same for people who can make sounds but not words: people losing their speech to ALS, stroke survivors, minimally speaking autistic people. It learns the sounds one person can make (a hum, two clicks, a sigh) and says out loud what each one means. A caregiver can answer back by typing, and Tink speaks the reply. For people who are losing their voice, there is message banking: while they can still speak, they record each phrase, and when Tink recognizes the sound it plays their recording instead of a computer voice. Everything runs on the laptop, and nothing is sent to any AI service by default.
+Tink learns the sounds one person can still make (a hum, two clicks, a sigh) and says out loud what each one means. It's for people who can make sounds but not words: people losing their speech to ALS, stroke survivors, minimally speaking autistic people. While someone can still speak, they can bank their own voice saying each phrase, and Tink plays that recording instead of a computer voice.
 
-How message banking works for ALS, and where each piece lives in the code: [docs/als.md](docs/als.md).
+It started as my HackTX 26 project. I kept going to find out whether it actually works, and to build it the way it would need to be built if someone relied on it.
 
-Made by [Arham Doshi](https://github.com/hammy229) at HackTX 26, on [voc2vec](https://ieeexplore.ieee.org/document/10890672) (Koudounas et al., ICASSP 2025), a speech model pretrained on 125 hours of non-verbal vocalizations.
+**It hasn't been tested with a nonspeaking person using it.** Everything below comes from existing datasets.
 
-**Status:** finished weekend project (October 2026). The app runs end to end, but it has not been tested with nonspeaking users. On recorded sounds from 8 minimally speaking people ([ReCANVo](https://doi.org/10.5281/zenodo.5786860)), it guesses the meaning right 27% of the time against 19% chance: above chance, far from reliable. Details and what that means: [docs/accuracy.md](docs/accuracy.md). It is no longer under active development.
+## Does it work?
 
-## Run it
+Teaching each sound takes a few recordings from one person, with no training across people. The main question is what happens when someone teaches it once and uses it on another day.
 
-Needs [uv](https://docs.astral.sh/uv/). The first run downloads the model (~360 MB).
+![Accuracy by benchmark with 95% confidence intervals, against chance](docs/figures/accuracy.svg)
 
-```bash
-uv sync
-uv run uvicorn tink.app:app --reload
-```
+<!-- results:start -->
+| Benchmark | People | Accuracy | Chance | Right within 2 questions |
+|---|---|---|---|---|
+| Dysarthric speech, taught in one sitting, tested on another day | 4 | 61.5% [55.1, 68.4] | 20.0% | 83.6% |
+| Control speakers, taught in one sitting, tested on another day | 5 | 73.7% [60.6, 86.4] | 20.0% | 85.3% |
+| Dysarthric speech, any session | 7 | 76.6% [68.3, 85.8] | 20.0% | 88.5% |
+| Control speakers, any session | 6 | 74.9% [58.2, 89.3] | 20.0% | 85.6% |
+| Spontaneous sounds, taught in one sitting, tested on another day | 8 | 47.6% [41.3, 54.8] | 41.3% | 81.8% |
+| Spontaneous sounds, taught across days, tested on another day | 8 | 26.7% [22.8, 30.8] | 19.0% | 47.7% |
+<!-- results:end -->
 
-Open http://localhost:8000 in Chrome. Allow the microphone.
+So there's a real signal on deliberate sounds, though the top row has only 4 people. Spontaneous sounds mostly don't carry their meaning, and Tink isn't reliable enough to depend on alone. That's why it asks when it's unsure, and the "within 2 questions" column is why asking helps so much.
 
-1. **Teach a sound:** type what the sound is and what it means (the phrase can be in the person's own language), then press **Record take** and make the sound. Do it about 5 times.
-2. Teach at least 2 sounds. Tink compares sounds against each other, so it won't match with only one.
-3. **Bank their voice:** while the person can still speak, press **Record them saying it** (in the Sounds list or the Teach panel). The phrase appears on the paper screen to read aloud. From then on, Tink plays their recording when it recognizes that sound. **Say it again** and the urgent alarm use it too. If there is no recording (or Mute voice is on), Tink uses the computer voice.
-4. Press **Listen** (or space), make a sound, and Tink says what it means.
-5. **Room noise:** press **Record 3 seconds of room** with nobody making a sound (do it 2 or 3 times, in the room you will demo in). Sounds that match the room are ignored.
-6. **Yes and no:** teach a sound marked **It means yes** and one marked **It means no**. When Tink is unsure, it asks about one meaning at a time and the person answers with those sounds.
-7. **Urgent:** tick **Urgent** when teaching a sound like a cry of pain. Tink skips questions, fires at lower confidence, turns the screen red, and repeats the phrase until someone presses **I'm here**.
-8. **Answer back:** type a reply (or tap a quick reply) and Tink speaks it aloud to the person, as typed. (Translation needs the optional LLM below.)
+Full results are in [docs/results.md](docs/results.md), which is generated from the raw JSON, and a test fails if the two disagree. How I measured it and what it can't tell you: [docs/accuracy.md](docs/accuracy.md). Model details: [docs/model-card.md](docs/model-card.md).
 
-| Key | Does |
-|---|---|
-| Space | Listen |
-| P | Present mode: the stage fills the screen for a projector |
-| Esc | Leave present mode |
+## Decisions the data changed
 
-Optional and off by default: `tink/llm.py` can reword phrases and translate replies with an LLM if you set `XAI_API_KEY`. Without it, no text or audio goes anywhere.
+These are the parts I'd most want to talk about, as most of them are things I got wrong first.
 
-## Hosting
+- **My own benchmark was hiding the real number.** A first version let each word be taught on a different day and scored 42%. Teaching in one sitting, as the app does, scored 62%. The earlier design let a session stand in for a word.
+- **I shipped a feature and then removed it.** Letting a caregiver's "Right" teach Tink looked like +2.3 points, so I built it. A review showed my simulation could help a clip with a near copy of itself. Done in time order, it [loses 7.0 points](docs/adr/0005-do-not-learn-from-confirmed-sounds.md) on deliberate sounds, p = 0.004.
+- **I trained a head and didn't use it.** A prototypical network head won on one dataset and lost on the other, and I'd set the rule before running it: [it has to win on both](docs/adr/0004-do-not-ship-the-trained-head.md).
+- **One dataset would have picked the wrong model.** Cutting the model down to its front end looked 0.9 points better on ReCANVo, and it [loses 4.8 on dysarthric speech](docs/adr/0002-ship-the-full-depth-model.md).
+- **The bigger number wasn't the right choice.** HuBERT beats voc2vec by about 9 points on words, and voc2vec wins on non-verbal sound, so [I kept voc2vec](docs/adr/0003-keep-voc2vec-over-hubert.md), since Tink is for sounds that aren't words.
 
-Set `TINK_PUBLIC=1` to give each person a profile with a private link, so one deployment can serve several people. A Docker image is included (see `docs/deploy.md`).
+All of the ADRs are in [docs/adr](docs/adr).
 
 ## How it works
 
+```mermaid
+flowchart LR
+    mic[Mic] --> vad[Voice activity detection<br/>adaptive noise floor]
+    vad --> enc[voc2vec encoder<br/>ONNX in WebAssembly, or PyTorch]
+    enc --> score[Centered cosine<br/>to each taught sound]
+    cam[Webcam cues] --> bayes
+    score --> bayes[Bayesian posterior<br/>with an unknown option<br/>and a time-of-day prior]
+    bayes --> turn{Decide}
+    turn -->|sure| say[Their banked voice,<br/>or the taught phrase]
+    turn -->|unsure| ask[Ask yes or no,<br/>best guess first]
+    turn -->|urgent| alarm[Alarm until answered]
 ```
-mic clip ──► voc2vec scores ──┐
-                              ├─► Bayesian posterior ──► their banked voice, or the taught phrase ──► spoken
-webcam ──► face cues ─────────┘   (time-of-day prior)
-```
 
-1. **Audio.** The browser records a clip, stops on its own when the sound ends, and sends a WAV. The backend resamples to 16 kHz mono and trims the silence.
-2. **voc2vec.** Turns the clip into one vector (mean of one hidden layer over time). The released checkpoints have no classifier head, so there is no training. Each sound's vector is the average of its takes, and the clip is scored against each by cosine similarity after subtracting the mean of all takes.
-3. **Augmentation and self-calibration** (`tink/audio.py`, `tink/store.py`). Each take also yields 4 variants (about a semitone up and down, two noise levels), so 5 recordings cover more of how a voice drifts. After every change Tink tests itself: each original take is held out with its own variants and matched against the rest. That fits the softmax temperature (floored at 0.04 so a few easy takes can't make it certain) and the "didn't catch it" threshold to this person, and the Sounds panel shows "right on N of M takes".
-4. **Bayes** (`tink/bayes.py`). `P(sound | clip, cues, time) ∝ P(clip | sound) · P(cues | sound) · P(sound | time)`.
-   - Audio likelihood: softmax of the scores. An "unknown" option sits at `TINK_THRESHOLD`, so weak matches become "I didn't catch that."
-   - Time prior: Dirichlet-smoothed counts of confirmed uses per part of day. It learns every time someone presses **Right**.
-   - Face cues: a sound taught with "smile" gets a boost when the camera sees a smile.
-5. **Webcam** (`web/cues.js`). MediaPipe Face Landmarker runs in the browser and reports nod, shake, smile, frown, or eyes closed. Only those words leave the browser, never video.
-6. **Speaking.** If the person banked that phrase, the browser plays their recording (`/api/voice/{name}`). Otherwise it speaks the taught phrase with the browser's voice. When the top two meanings are close, Tink asks instead, and the person answers with their own yes and no sounds.
+There are two ways to run the same logic:
 
-## ## Risk test
+- **In the browser** (`web/engine/`): the model runs in a Web Worker with ONNX Runtime Web, and sounds are kept in IndexedDB. Nothing leaves the device.
+- **On a server** (`tink/`): FastAPI with per-person profiles, plus a WebSocket for devices with no screen.
 
-Before tuning anything, check the core idea works on your own voices:
+Two implementations can drift apart, so a fixture generated from the Python code is checked by both pytest and `node:test`.
+
+## Engineering
+
+| Area | What's there | Evidence |
+|---|---|---|
+| **Model deployment** | ONNX export, int8 quantization from 378 MB to 122 MB, hash-pinned download | Loses about 0.1 points against PyTorch on the real benchmarks. 143 ms per embedding in WebAssembly. A test blocks pinning a model with no passing report. |
+| **Evaluation** | Paired comparisons, person-level bootstrap, exact sign-flip test, calibration, conformal, label-shuffle check, promotion gates | [results.md](docs/results.md) |
+| **Concurrency** | Inference on worker threads, a lock per person, one lock around the model ([ADR 6](docs/adr/0006-inference-off-the-event-loop.md)) | With 16 clients on one laptop: 58 requests per second, p95 342 ms, no errors, and `/healthz` p95 3 ms while the model is busy. |
+| **Real time** | Voice activity detection that learns the room's noise floor, so someone who can't press a button can use it | Tested on a scripted stream with a fan, and end to end in Chromium. |
+| **Reliability** | Atomic writes, embeddings cached by model, requests queued in the browser, recovery from a dead worker or corrupt cache | A test proves a crash mid-write keeps the old file. |
+| **Security and privacy** | Content security policy, SRI, upload limits checked before decoding, stream limits, rate limits that forged headers can't dodge, no phrases in logs | The end-to-end test checks that no request carries audio, and serves production's real headers. |
+| **Testing** | 100+ pytest tests, parity tests, a real-model browser test, CI with lint, types, coverage, and commit checks | `uv run pytest`, `npm test`, `npm run e2e` |
+
+## Run it
+
+The browser version needs nothing. To run the server, you need [uv](https://docs.astral.sh/uv/). The first run downloads the model (about 360 MB).
 
 ```bash
-# teach 3-4 sounds x 5 takes in the app first (saved to data/takes/)
-uv run python risk_test.py
+uv sync
+uv run uvicorn tink.app:app --reload     # then open http://localhost:8000 in Chrome
 ```
 
-It prints leave-one-out accuracy for every layer and a suggested threshold. Go if accuracy is 85% or more.
+1. **Teach a sound:** say what it sounds like and what it means, then record it about 5 times. Teach at least 2.
+2. **Bank their voice:** while the person can still speak, record them saying each phrase.
+3. **Listen:** press Listen or space, or turn on **Keep listening** to go hands-free.
+4. **Room noise:** record the room with nobody making a sound, so Tink ignores it.
+5. **Yes and no:** teach a yes sound and a no sound, and Tink asks about one meaning at a time when it's unsure.
+6. **Urgent:** mark a sound as urgent, and Tink skips the questions and repeats the phrase until someone answers.
 
-To check the paper's claim on your own recordings (voc2vec vs. general speech models, same clips, same test):
+To stream from a device with no screen, send 16 kHz mono 16-bit PCM to `ws://host/api/listen` and get one JSON turn back per sound. API docs are at `/docs` on a running server.
+
+## Reproduce the results
 
 ```bash
-uv run python risk_test.py --compare
-uv run python risk_test.py --augment    # accuracy with and without augmented variants
+uv run --group eval python -m evals.embed recanvo path/to/ReCANVo
+uv run --group eval python -m evals.embed torgo path/to/TORGO
+uv run --group eval python -m evals.run --recanvo path/to/ReCANVo --torgo path/to/TORGO
+uv run --group eval python -m evals.render
+
+uv run --group export python -m scripts.export_onnx --layers 12 --clips path/to/wavs
+uv run --group eval --group export python -m evals.onnx_gate models/voc2vec-l12.int8.onnx --layer 12 --recanvo path/to/ReCANVo --torgo path/to/TORGO
 ```
 
-## Tests
+## Layout
 
-```bash
-uv run pytest -q
 ```
-
-They use synthetic tones, so they need no recordings and never call any LLM.
+tink/         server: audio, embeddings, scoring, Bayes, turn decisions, voice activity, API
+web/engine/   the same logic in the browser, the model worker, and the local API
+web/          the site and app (plain HTML, CSS, and JS, no build step)
+evals/        benchmarks, metrics, the trained head, the model gate, and the report
+scripts/      ONNX export, load test, parity fixture
+tests/ e2e/   pytest, and the real model in real Chromium
+docs/         results, accuracy, model card, ADRs
+```
 
 ## Settings
 
 | Env var | Default | What it does |
 |---|---|---|
-| `TINK_MODEL` | `alkiskoudounas/voc2vec-hubert-ls-pt` | Any voc2vec checkpoint |
-| `TINK_LAYER` | `-1` | Hidden layer to pool (0 to 12) |
-| `TINK_THRESHOLD` | `0.5` | "Didn't catch it" cutoff until calibration takes over |
-| `TINK_DATA` | `data` | Where takes, `sounds.json`, and `usage.json` live |
-| `TINK_TEMP` | `0.1` | Softmax temperature until calibration takes over (lower = more confident) |
-| `TINK_AUGMENT` | `1` | Add 4 augmented variants per take (set `0` to turn off) |
-| `XAI_API_KEY` | unset | Optional LLM, off by default. Turns on rewording and translation |
-| `TINK_GROK_MODEL` | `grok-4.3` | Optional LLM, off by default: model id |
-| `TINK_PUBLIC` | unset | Set to `1` to host: per-person profiles with private links |
-| `TINK_MAX_PROFILES` | `500` | Cap on profiles when hosting |
+| `TINK_MODEL` | `alkiskoudounas/voc2vec-hubert-ls-pt` | Encoder. `facebook/hubert-base-ls960` does better on spoken words. |
+| `TINK_ONNX` | unset | Path to an exported model. Serves without torch. |
+| `TINK_LAYER` | `-1` | Hidden layer to pool |
+| `TINK_DATA` | `data` | Where takes and profiles live |
+| `TINK_AUGMENT` | `1` | Add 4 variants per take |
+| `TINK_PUBLIC` | unset | `1` turns on per-person profiles with private links, for hosting (see [docs/deploy.md](docs/deploy.md)) |
+| `TINK_TRUST_PROXY` | unset | `1` only behind a proxy you run |
+| `XAI_API_KEY` | unset | Optional LLM wording and translation, off by default. Without it, no text or audio goes anywhere. |
 
-## API
+## Credits
 
-| Method | Path | Body | Returns |
-|---|---|---|---|
-| GET | `/api/sounds` | | `{sounds: [{name, phrase, cues, takes}], threshold, cues, llm}` |
-| POST | `/api/enroll` | form: `name`, `phrase`, `cues` (JSON list), `audio` (WAV) | `{name, takes}` |
-| POST | `/api/recognize` | form: `audio` (WAV), `cues` (JSON list) | `{matched, name, p, say, ask, source, ranked, scores, packet}` |
-| POST | `/api/voice` | form: `name`, `audio` (WAV) | `{ok, name}` (banks the person saying this sound's phrase) |
-| GET | `/api/voice/{name}` | | WAV of the banked voice, or 404 |
-| POST | `/api/confirm` | form: `name` | `{ok, usage}` |
-| POST | `/api/reply` | form: `text`, `to` (language) | `{say, typed, to, source, packet}` |
-| DELETE | `/api/sounds/{name}` | | `{ok}` |
-
-## Layout
-
-```
-tink/audio.py    load, resample, trim
-tink/embed.py    voc2vec embeddings
-tink/store.py    enrolled sounds, banked voices, scoring
-tink/bayes.py    posterior over sounds (audio, time of day, face cues)
-tink/llm.py      optional LLM wording (off by default)
-tink/profiles.py per-person profiles for hosting
-tink/app.py      FastAPI routes, serves web/
-web/             frontend (plain HTML/CSS/JS, no build step); cues.js = MediaPipe face cues
-risk_test.py     layer sweep + threshold; --compare runs the baseline models
-eval_recanvo.py  accuracy on real nonspeaking people (ReCANVo), see docs/accuracy.md
-tests/           pytest suite (synthetic audio)
-PRODUCT.md       who Tink is for and what it must never claim
-```
+Made by [Arham Doshi](https://github.com/hammy229). Built on [voc2vec](https://ieeexplore.ieee.org/document/10890672) (Koudounas et al., ICASSP 2025, Apache 2.0). Evaluated on [ReCANVo](https://doi.org/10.5281/zenodo.5786860) (Narain and Johnson, 2021) and [TORGO](https://www.cs.toronto.edu/~complingweb/data/TORGO/torgo.html) (Rudzicz, Namasivayam, and Wolff, 2012, doi:10.1007/s10579-011-9145-0). The hackathon write-up is in [docs/archive](docs/archive).
