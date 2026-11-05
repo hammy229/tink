@@ -49,6 +49,26 @@ def logmel_stats(wav: np.ndarray) -> np.ndarray:
     return (stats / (np.linalg.norm(stats) + 1e-9)).astype(np.float32)[None]
 
 
+def embed_augmented(ds: Dataset, layer: int = 12) -> None:
+    """Each clip's 4 variants, through the same tink.audio.augment the app uses at enrollment."""
+    from tink.embed import layers
+
+    out = cache_path(ds, "voc2vec-aug")
+    if out.exists():
+        print(f"{ds.name}/voc2vec-aug: cached")
+        return
+    H = np.zeros((len(ds), 4, 768), np.float16)
+    for i, name in enumerate(ds.paths):
+        wav = audio.load(ds.root / name)[: 30 * audio.SR]
+        for j, variant in enumerate(audio.augment(wav)):
+            H[i, j] = layers(variant, MODELS["voc2vec"])[layer]
+        if i % 500 == 0:
+            print(f"{ds.name}/voc2vec-aug {i}/{len(ds)}", flush=True)
+    out.parent.mkdir(exist_ok=True)
+    np.save(out, H)
+    print(f"{ds.name}/voc2vec-aug: done", flush=True)
+
+
 def cache_path(ds: Dataset, model: str) -> Path:
     return ds.root / "embeddings" / f"{model}.npy"
 
@@ -88,3 +108,4 @@ if __name__ == "__main__":
     print(f"{dataset.name}: {len(dataset)} clips, {len(set(dataset.people))} people, {len(set(dataset.labels))} labels")
     for m in (LOGMEL, *MODELS):
         embed_dataset(dataset, m)
+    embed_augmented(dataset)

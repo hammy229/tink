@@ -60,7 +60,20 @@ def bootstrap_ci(per_person: np.ndarray, n: int = 10_000, seed: int = 0, level: 
             "high": float(np.percentile(means, 100 - tail)), "n": len(per_person)}
 
 
-def beats(candidate: np.ndarray, baseline: np.ndarray) -> dict:
-    """Paired comparison on the same people and the same episodes. Only a CI above zero counts as better."""
-    ci = bootstrap_ci(np.asarray(candidate) - np.asarray(baseline))
-    return {**ci, "better": ci["low"] > 0, "worse": ci["high"] < 0}
+def sign_flip_p(differences: np.ndarray) -> float:
+    """Exact two-sided permutation test: could these paired differences come from a coin flip on each person's sign?
+
+    A percentile bootstrap under-covers with 6 to 8 people, so a comparison has to pass this too. With n people the
+    smallest possible p is 2 / 2^n, so 6 people can reach 0.031 at best.
+    """
+    d = np.asarray(differences, dtype=float)
+    signs = np.array(np.meshgrid(*[[-1.0, 1.0]] * len(d))).reshape(len(d), -1).T
+    return float(np.mean(np.abs((signs * d).sum(axis=1)) >= abs(d.sum()) - 1e-12))
+
+
+def beats(candidate: np.ndarray, baseline: np.ndarray, alpha: float = 0.05) -> dict:
+    """Paired comparison on the same people and the same episodes. Better means the CI is above zero AND p < alpha."""
+    d = np.asarray(candidate) - np.asarray(baseline)
+    ci = bootstrap_ci(d)
+    p = sign_flip_p(d)
+    return {**ci, "p": p, "better": bool(ci["low"] > 0 and p < alpha), "worse": bool(ci["high"] < 0 and p < alpha)}

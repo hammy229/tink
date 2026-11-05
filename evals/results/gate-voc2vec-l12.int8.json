@@ -1,0 +1,37 @@
+{
+  "model": "voc2vec-l12.int8.onnx",
+  "bytes": 121883139,
+  "layer": 12,
+  "max_loss": 0.01,
+  "results": [
+    {
+      "benchmark": "recanvo",
+      "exported": 0.2660638888888888,
+      "pytorch": 0.26694722222222217,
+      "diff": {
+        "mean": -0.0008833333333333332,
+        "low": -0.0018612500000000326,
+        "high": 0.0001500000000000043,
+        "n": 8,
+        "better": false,
+        "worse": false
+      },
+      "passes": true
+    },
+    {
+      "benchmark": "dysarthric",
+      "exported": 0.765233560090703,
+      "pytorch": 0.7664331065759636,
+      "diff": {
+        "mean": -0.001199546485260756,
+        "low": -0.0036496598639455774,
+        "high": 0.0014081632653061918,
+        "n": 7,
+        "better": false,
+        "worse": false
+      },
+      "passes": true
+    }
+  ],
+  "passes": true
+}

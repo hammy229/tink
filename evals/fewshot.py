@@ -77,13 +77,23 @@ def session_word_options(labels: np.ndarray, sessions: np.ndarray) -> dict:
     return options
 
 
+def enrollment_sessions(labels: np.ndarray, sessions: np.ndarray) -> dict:
+    """Sessions where someone could teach a whole episode in one sitting, and the words they could teach there."""
+    by_session: dict = {}
+    for w, good in session_word_options(labels, sessions).items():
+        for s in good:
+            by_session.setdefault(s, []).append(w)
+    return {s: sorted(ws) for s, ws in by_session.items() if len(ws) >= WORD_WAYS}
+
+
 def word_episode_across_sessions(labels: np.ndarray, sessions: np.ndarray, rng: np.random.Generator) -> Episode:
-    """Teach once, use on another day, with deliberate sounds: the test takes come only from other sessions."""
-    options = session_word_options(labels, sessions)
+    """Teach once, use on another day, with deliberate sounds. Every word is taught in the same sitting, as in the
+    app, and tested only on other sessions, so a session can't stand in for a word."""
+    choices = enrollment_sessions(labels, sessions)
+    s = rng.choice(sorted(choices))
     enroll, test = [], []
-    for w in rng.choice(sorted(options), WORD_WAYS, replace=False):
+    for w in rng.choice(choices[s], WORD_WAYS, replace=False):
         idx = np.flatnonzero(labels == w)
-        s = rng.choice(options[w])
         enroll.append(rng.choice(idx[sessions[idx] == s], WORD_SHOTS, replace=False))
         test.append(idx[sessions[idx] != s])
     return Episode(tuple(enroll), tuple(test))
@@ -139,14 +149,22 @@ METHODS: dict[str, Method] = {"centroid": centroid, "uncentered": uncentered, "n
 
 # ---------- running ----------
 
-def run_person(X, labels, sessions, method: Method, episode: EpisodeFn, seed: int, trials: int) -> dict:
-    """Same seed for every method and model, so comparisons are paired on identical episodes."""
+def run_person(X, labels, sessions, method: Method, episode: EpisodeFn, seed: int, trials: int,
+               augmented: np.ndarray | None = None) -> dict:
+    """Same seed for every method and model, so comparisons are paired on identical episodes.
+
+    `augmented` is (clips, variants, dim). When given, enrollment also uses each take's variants, as the app does.
+    """
     rng = np.random.default_rng(seed)
     accs, qranks, chance = [], [], []
     for _ in range(trials):
         ep = episode(labels, sessions, rng)
         Xe = np.concatenate([X[i] for i in ep.enroll])
         ye = np.concatenate([np.full(len(i), k) for k, i in enumerate(ep.enroll)])
+        if augmented is not None:
+            extra = [augmented[i].reshape(-1, X.shape[1]) for i in ep.enroll]
+            Xe = np.concatenate([Xe, *extra])
+            ye = np.concatenate([ye, *[np.full(len(e), k) for k, e in enumerate(extra)]])
         Xt = np.concatenate([X[i] for i in ep.test])
         yt = np.concatenate([np.full(len(i), k) for k, i in enumerate(ep.test)])
         scores = method(Xe, ye, Xt)
@@ -158,38 +176,55 @@ def run_person(X, labels, sessions, method: Method, episode: EpisodeFn, seed: in
             "within_2": float((r <= 2).mean()), "within_3": float((r <= 3).mean())}
 
 
-def run_adaptive(X, labels, sessions, episode: EpisodeFn, seed: int, trials: int) -> dict:
-    """Does learning from confirmed sounds track drift? A caregiver's "Right" adds that clip to the sound.
+MAX_LEARNED = 30  # same cap as tink.store.MAX_LEARNED_TAKES
 
-    Plays each episode's test clips in random order. Only a correct prediction gets added, since that's what "Right"
-    can confirm; wrong guesses teach nothing. Both policies are scored on the second half, on identical clips, so
-    the adaptive one is judged only on sounds it has never been given.
+
+def run_adaptive(X, labels, sessions, episode: EpisodeFn, seed: int, trials: int,
+                 wrong_confirm: float = 0.1) -> dict | None:
+    """Does learning from confirmed sounds help on later days? A caregiver's "Right" adds that clip to the sound.
+
+    Time order, not random order: the test clips play session by session. Earlier sessions are where people confirm,
+    and only the later sessions are scored, so a clip can't help a near copy of itself from the same sitting.
+    Correct guesses get confirmed, and a tired caregiver also confirms a wrong guess `wrong_confirm` of the time, which
+    adds that clip to the wrong sound. Returns None when this person has too few sessions to tell.
     """
     rng = np.random.default_rng(seed)
-    static_acc, adaptive_acc, added = [], [], []
+    static_acc, adaptive_acc, added, wrongly = [], [], [], []
     for _ in range(trials):
         ep = episode(labels, sessions, rng)
         Xe = np.concatenate([X[i] for i in ep.enroll])
         ye = np.concatenate([np.full(len(i), k) for k, i in enumerate(ep.enroll)])
-        order = rng.permutation(np.concatenate(ep.test))
-        by_clip = {int(i): k for k, idx in enumerate(ep.test) for i in idx}
-        yt = np.array([by_clip[int(i)] for i in order])
-        half = len(order) // 2
-        ways = len(ep.enroll)
-        if len({*yt[half:]}) < 2 or half == 0:
+        pool = np.concatenate(ep.test)
+        truth_of = {int(i): k for k, idx in enumerate(ep.test) for i in idx}
+        days = sorted(set(sessions[pool]))
+        if len(days) < 2:
+            continue
+        cut = max(1, len(days) // 2)
+        earlier = rng.permutation(pool[np.isin(sessions[pool], days[:cut])])
+        later = pool[np.isin(sessions[pool], days[cut:])]
+        order = sorted(earlier, key=lambda i: sessions[i])
+        y_later = np.array([truth_of[int(i)] for i in later])
+        if len(set(y_later)) < 2:
             continue
         grown_X, grown_y = Xe, ye
-        for i, truth in zip(order[:half], yt[:half], strict=True):
-            guess = centroid(grown_X, grown_y, X[i:i + 1]).argmax()
-            if guess == truth:
+        bad = 0
+        for i in order:
+            guess = int(centroid(grown_X, grown_y, X[i:i + 1]).argmax())
+            right = guess == truth_of[int(i)]
+            if (right or rng.random() < wrong_confirm) and (grown_y == guess).sum() < MAX_LEARNED:
                 grown_X = np.concatenate([grown_X, X[i:i + 1]])
-                grown_y = np.append(grown_y, truth)
-        test_X = X[order[half:]]
-        static_acc.append(metrics.balanced_accuracy(centroid(Xe, ye, test_X), yt[half:], ways))
-        adaptive_acc.append(metrics.balanced_accuracy(centroid(grown_X, grown_y, test_X), yt[half:], ways))
+                grown_y = np.append(grown_y, guess)
+                bad += not right
+        ways = len(ep.enroll)
+        static_acc.append(metrics.balanced_accuracy(centroid(Xe, ye, X[later]), y_later, ways))
+        adaptive_acc.append(metrics.balanced_accuracy(centroid(grown_X, grown_y, X[later]), y_later, ways))
         added.append(len(grown_y) - len(ye))
+        wrongly.append(bad)
+    if not static_acc:
+        return None
     return {"static": float(np.mean(static_acc)), "adaptive": float(np.mean(adaptive_acc)),
-            "confirmed_clips_per_episode": float(np.mean(added))}
+            "confirmed_clips_per_episode": float(np.mean(added)), "wrong_clips_per_episode": float(np.mean(wrongly)),
+            "episodes": len(static_acc)}
 
 
 def _leave_one_take_out(Xe: np.ndarray, ye: np.ndarray) -> tuple[np.ndarray, np.ndarray]:

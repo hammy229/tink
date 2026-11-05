@@ -71,6 +71,14 @@ def test_other_session_words_never_test_in_the_enrollment_session():
             assert not set(sess[enroll]) & set(sess[test])
 
 
+def test_every_word_in_an_other_session_episode_is_taught_in_one_sitting():
+    _, y, sess = blobs(1.0)
+    rng = np.random.default_rng(0)
+    for _ in range(50):
+        ep = fewshot.word_episode_across_sessions(y, sess, rng)
+        assert len({sess[i] for enroll in ep.enroll for i in enroll}) == 1
+
+
 def test_word_needs_takes_in_two_sessions_to_count():
     labels = np.array(["a", "a", "a", "b", "b", "b", "c", "c"])
     sessions = np.array(["s1", "s1", "s2", "s1", "s1", "s1", "s1", "s2"])
@@ -91,20 +99,57 @@ def test_every_method_separates_easy_data(method):
     assert r["accuracy"] > 0.9
 
 
-def test_learning_from_confirmed_sounds_tracks_drift():
-    rng = np.random.default_rng(0)
+def _drifting(rng):
+    """Every sound moves away from its first session, and stays moved on later days."""
     means = rng.normal(size=(5, 16))
     X, y, sess = [], [], []
     for c in range(5):
-        for s, drift in (("s0", 0.0), ("s1", 3.0)):  # every sound moves between sessions, in its own direction
-            shift = rng.normal(size=16) * drift
-            X.append(means[c] * 2 + shift + rng.normal(size=(20, 16)))
+        moved = means[c] * 0.6 + rng.normal(size=16) * 1.6
+        for s, center in (("s0", means[c] * 0.6), ("s1", moved), ("s2", moved)):
+            X.append(center + rng.normal(size=(20, 16)))
             y += [f"c{c}"] * 20
             sess += [s] * 20
-    X, y, sess = np.concatenate(X).astype(np.float32), np.array(y), np.array(sess)
-    r = fewshot.run_adaptive(X, y, sess, fewshot.across_sessions, 0, 30)
-    assert r["adaptive"] > r["static"]
+    return np.concatenate(X).astype(np.float32), np.array(y), np.array(sess)
+
+
+def test_learning_from_confirmed_sounds_helps_when_sounds_really_drift():
+    X, y, sess = _drifting(np.random.default_rng(0))
+
+    def taught_on_the_first_day(labels, sessions, rng):
+        enroll, test = [], []
+        for c in sorted(set(labels)):
+            idx = np.flatnonzero(labels == c)
+            enroll.append(rng.choice(idx[sessions[idx] == "s0"], 5, replace=False))
+            test.append(idx[sessions[idx] != "s0"])
+        return fewshot.Episode(tuple(enroll), tuple(test))
+
+    r = fewshot.run_adaptive(X, y, sess, taught_on_the_first_day, 0, 20)
+    assert r["adaptive"] > r["static"] + 0.02
     assert r["confirmed_clips_per_episode"] > 0
+
+
+def test_a_careless_caregiver_adds_wrong_clips():
+    X, y, sess = _drifting(np.random.default_rng(0))
+    assert fewshot.run_adaptive(X, y, sess, fewshot.across_sessions, 0, 10, wrong_confirm=0.0)["wrong_clips_per_episode"] == 0
+    assert fewshot.run_adaptive(X, y, sess, fewshot.across_sessions, 0, 10, wrong_confirm=0.9)["wrong_clips_per_episode"] > 0
+
+
+def test_learning_needs_more_than_one_later_session():
+    X, y, _sess = blobs(2.0)
+    one_day = np.full(len(y), "s0")
+    assert fewshot.run_adaptive(X, y, one_day, fewshot.word_episode, 0, 5) is None
+
+
+def test_sign_flip_test_is_exact():
+    assert metrics.sign_flip_p(np.array([1.0, 1.0, 1.0])) == pytest.approx(2 / 8)
+    assert metrics.sign_flip_p(np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])) == pytest.approx(2 / 64)
+    assert metrics.sign_flip_p(np.array([1.0, -1.0, 1.0, -1.0])) == pytest.approx(1.0)
+
+
+def test_six_people_all_better_is_enough_but_five_is_not():
+    base = np.zeros(6)
+    assert metrics.beats(base + np.arange(1, 7) / 100, base)["better"] is True
+    assert metrics.beats(np.zeros(5) + np.arange(1, 6) / 100, np.zeros(5))["better"] is False
 
 
 def test_shuffled_labels_score_at_chance():
@@ -157,9 +202,9 @@ def test_bootstrap_interval_contains_the_mean_and_narrows_with_people():
 
 
 def test_beats_needs_the_whole_interval_above_zero():
-    base = np.array([0.2, 0.3, 0.25, 0.4])
-    assert metrics.beats(base + 0.1, base)["better"] is True
-    assert metrics.beats(base + np.array([0.1, -0.1, 0.05, -0.05]), base)["better"] is False
+    base = np.array([0.2, 0.3, 0.25, 0.4, 0.3, 0.35])
+    assert metrics.beats(base + np.array([0.1, 0.12, 0.09, 0.11, 0.1, 0.13]), base)["better"] is True
+    assert metrics.beats(base + np.array([0.1, -0.1, 0.05, -0.05, 0.02, -0.02]), base)["better"] is False
 
 
 def test_logmel_baseline_shape_and_normalization():

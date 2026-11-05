@@ -42,6 +42,7 @@ class Bench:
     episode: fewshot.EpisodeFn
     trials: int
     feats: dict  # model -> memmapped (clips, layers, dim)
+    aug_path: Path
 
 
 def _build(args) -> list[Bench]:
@@ -62,18 +63,18 @@ def _build(args) -> list[Bench]:
         if len(set(torgo.labels[idx])) >= fewshot.WORD_WAYS:
             group = "dysarthric" if is_dysarthric(p) else "controls"
             groups[group][p] = (idx, torgo.labels[idx], torgo.sessions[idx])
-            options = fewshot.session_word_options(torgo.labels[idx], torgo.sessions[idx])
-            if len(options) >= fewshot.WORD_WAYS:
+            if fewshot.enrollment_sessions(torgo.labels[idx], torgo.sessions[idx]):
                 groups[f"{group}_other_session"][p] = (idx, torgo.labels[idx], torgo.sessions[idx])
     feats_t = {m: np.load(cache_path(torgo, m), mmap_mode="r") for m in (LOGMEL, *MODELS)}
+    aug_r, aug_t = cache_path(recanvo, "voc2vec-aug"), cache_path(torgo, "voc2vec-aug")
     return [
-        Bench("recanvo", rec, fewshot.across_sessions, args.trials, feats_r),
-        Bench("dysarthric", groups["dysarthric"], fewshot.word_episode, args.trials * 4, feats_t),
-        Bench("controls", groups["controls"], fewshot.word_episode, args.trials * 4, feats_t),
+        Bench("recanvo", rec, fewshot.across_sessions, args.trials, feats_r, aug_r),
+        Bench("dysarthric", groups["dysarthric"], fewshot.word_episode, args.trials * 4, feats_t, aug_t),
+        Bench("controls", groups["controls"], fewshot.word_episode, args.trials * 4, feats_t, aug_t),
         Bench("dysarthric_other_session", groups["dysarthric_other_session"], fewshot.word_episode_across_sessions,
-              args.trials * 4, feats_t),
+              args.trials * 4, feats_t, aug_t),
         Bench("controls_other_session", groups["controls_other_session"], fewshot.word_episode_across_sessions,
-              args.trials * 4, feats_t),
+              args.trials * 4, feats_t, aug_t),
     ]
 
 
@@ -146,19 +147,38 @@ def uncertainty(benches: list[Bench]) -> dict:
     return out
 
 
+def augmentation(benches: list[Bench]) -> dict:
+    """The app enrolls each take plus 4 variants. Is that worth 5 times the model calls?"""
+    out = {}
+    for b in benches:
+        aug = np.load(b.aug_path, mmap_mode="r")
+        off, on = {}, {}
+        for p, (idx, labels, sessions) in b.people.items():
+            X = _matrix(b, PRIMARY, APP_LAYER, p)
+            seed = fewshot.person_seed(p)
+            off[p] = fewshot.run_person(X, labels, sessions, fewshot.centroid, b.episode, seed, b.trials)
+            on[p] = fewshot.run_person(X, labels, sessions, fewshot.centroid, b.episode, seed, b.trials,
+                                       augmented=np.asarray(aug[idx], np.float32))
+        out[b.name] = {"off": _summary(off), "on": _summary(on), "vs_off": metrics.beats(_acc(on), _acc(off))}
+    return out
+
+
 def adaptive(benches: list[Bench]) -> dict:
-    """Same gate as the head: ship learning from "Right" only if it wins on spontaneous and on deliberate sounds."""
+    """Exploratory: same bar as the head, but the design was fixed after reading these same benchmarks. Learning from
+    "Right" stays only if it wins on later days on spontaneous and on deliberate sounds."""
     out: dict = {}
     for b in benches:
         if b.name not in ("recanvo", "dysarthric_other_session", "controls_other_session"):
             continue
-        per = {p: fewshot.run_adaptive(_matrix(b, PRIMARY, APP_LAYER, p), labels, sessions, b.episode,
+        ran = {p: fewshot.run_adaptive(_matrix(b, PRIMARY, APP_LAYER, p), labels, sessions, b.episode,
                                        fewshot.person_seed(p), b.trials)
                for p, (_, labels, sessions) in b.people.items()}
+        per = {p: r for p, r in ran.items() if r is not None}
         static = np.array([r["static"] for r in per.values()])
         grown = np.array([r["adaptive"] for r in per.values()])
-        out[b.name] = {"static": float(static.mean()), "adaptive": float(grown.mean()),
+        out[b.name] = {"people": len(per), "static": float(static.mean()), "adaptive": float(grown.mean()),
                        "vs_static": metrics.beats(grown, static),
+                       "wrong_clips_per_episode": float(np.mean([r["wrong_clips_per_episode"] for r in per.values()])),
                        "confirmed_clips_per_episode": float(np.mean([r["confirmed_clips_per_episode"]
                                                                      for r in per.values()]))}
     out["passes_gate"] = all(out[t]["vs_static"]["better"] for t in ("recanvo", "dysarthric_other_session"))
@@ -214,7 +234,8 @@ def leave_one_person_out_head(benches: list[Bench], layer: int, seeds: tuple[int
 
 
 def leakage_check(benches: list[Bench]) -> dict:
-    """Shuffle the labels: any score above chance would mean the evaluation itself leaks."""
+    """Shuffle the labels: a score above chance means the scoring itself is broken. This can't catch session or mic
+    leakage, as those survive a shuffle; the session-disjoint benchmarks are what address that."""
     out = {}
     for b in benches:
         rows = []
@@ -230,6 +251,8 @@ def leakage_check(benches: list[Bench]) -> dict:
                                            fewshot.person_seed(p), b.trials))
         out[b.name] = {"accuracy": float(np.mean([r["accuracy"] for r in rows])),
                        "chance": float(np.mean([r["chance"] for r in rows]))}
+        if out[b.name]["accuracy"] > out[b.name]["chance"] + 0.05:
+            raise RuntimeError(f"{b.name}: shuffled labels scored above chance, so the evaluation is broken")
     return out
 
 
@@ -248,6 +271,7 @@ def main() -> None:
         "git_sha": sha,
         "benchmarks": compare_models_and_methods(benches),
         "leakage_check": leakage_check(benches),
+        "augmentation": augmentation(benches),
         "uncertainty": uncertainty(benches),
         "adaptive": adaptive(benches),
         "head": leave_one_person_out_head(benches, args.head_layer, tuple(range(args.seeds))),
