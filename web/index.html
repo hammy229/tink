@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#fafaf7">
-<title>Tink — Every sound has something to say</title>
+<title>Tink: Every sound has something to say</title>
 <meta name="author" content="Arham Doshi">
 <meta name="referrer" content="no-referrer">
 <meta name="description" content="Tink learns the sounds a person with ALS can still make and says what they mean, in their own voice.">
@@ -154,7 +154,7 @@
     </div>
 
     <aside class="side">
-      <section class="panel" aria-labelledby="soundsTitle"><div class="head"><h2 id="soundsTitle">Sounds Tink knows</h2><small id="count"></small></div><ul class="sounds" id="sounds"></ul><p class="selftest" id="selfTest" aria-live="polite"></p><p class="empty" id="soundsEmpty">Nothing yet. Teach the first sound below: a hum, a click, a sigh—anything the person can repeat.</p></section>
+      <section class="panel" aria-labelledby="soundsTitle"><div class="head"><h2 id="soundsTitle">Sounds Tink knows</h2><small id="count"></small></div><ul class="sounds" id="sounds"></ul><p class="selftest" id="selfTest" aria-live="polite"></p><p class="empty" id="soundsEmpty">Nothing yet. Teach the first sound below: a hum, a click, a sigh, anything the person can repeat.</p></section>
       <section class="panel" aria-labelledby="teachTitle"><h2 id="teachTitle">Teach a sound</h2><form id="enroll" novalidate><div class="field"><label for="sname">What does the sound sound like?</label><input id="sname" autocomplete="off" maxlength="80" placeholder="Low hum"></div><div class="field"><label for="sphrase">What does it mean?</label><input id="sphrase" autocomplete="off" maxlength="80" placeholder="I’m thirsty."><span class="help">Any language. Tink can say it in another one.</span></div><fieldset class="field cue-pick"><legend>Does it usually come with any of these? <span class="optional">Optional</span></legend><div class="cue-boxes" id="cueBoxes"></div></fieldset><fieldset class="field cue-pick"><legend>Can it answer Tink’s questions? <span class="optional">Optional</span></legend><div class="cue-boxes" id="roleBox"><label><input type="radio" name="role" value="" checked> No</label><label><input type="radio" name="role" value="yes"> It means yes</label><label><input type="radio" name="role" value="no"> It means no</label></div><span class="help">With a yes sound and a no sound, Tink asks instead of guessing.</span></fieldset><label class="urgent-pick" for="surgent"><input type="checkbox" id="surgent"><span><b>Urgent</b><span class="help">Pain, can’t breathe, help. Tink alarms right away until someone answers.</span></span></label><div class="enroll-takes"><button type="submit" class="btn" id="take"><i class="ph-fill ph-record" aria-hidden="true"></i><span>Record take</span></button><span class="takes" id="enrollDots" aria-live="polite"></span><button type="button" class="btn quiet" id="done" hidden>Done</button>
             <button type="button" class="btn quiet" id="bankNow" hidden><i class="ph ph-microphone-stage" aria-hidden="true"></i><span>Record them saying it</span></button></div><span class="help">Record the same sound about 5 times.</span><p class="err" id="err" role="alert"></p></form></section>
       <section class="panel" aria-labelledby="roomTitle"><div class="head"><h2 id="roomTitle">Room noise</h2><small id="roomCount">not recorded</small></div><p class="help">Record a few seconds of the room with nobody making a sound. Tink can ignore chatter, footsteps, and fans instead of guessing.</p><div class="enroll-takes"><button type="button" class="btn quiet" id="roomTake"><i class="ph ph-waveform" aria-hidden="true"></i><span>Record 3 seconds of room</span></button></div><p class="err" id="roomErr" role="alert"></p></section>
@@ -182,7 +182,7 @@
       <li><span class="step-n">03</span><b>Bayes</b><small>A confidence that can say “unknown”</small></li>
       <li><span class="step-n">04</span><b>Voice</b><small>The phrase, out loud</small></li>
     </ol>
-    <p class="measured"><span class="eyebrow">Measured</span> On real sounds from 8 minimally speaking people (ReCANVo), Tink picks the right meaning 27% of the time, against 19% by chance. Those were spontaneous sounds, not deliberate signals, so it is a hard test. <a class="arrow-link" href="https://github.com/hammy229/tink/blob/main/docs/accuracy.md" target="_blank" rel="noreferrer"><span>Read the method</span><span aria-hidden="true">→</span></a></p>
+    <p class="measured"><span class="eyebrow">Measured</span> On repeated words from 4 people with dysarthria, taught once and tried on another day, Tink picks the right one of 5 about 62% of the time, against 20% by chance. On spontaneous sounds from 8 minimally speaking people, where the meaning is a state of mind, it gets 27% against 19%. It has not been tested with people using it to communicate. <a class="arrow-link" href="https://github.com/hammy229/tink/blob/main/docs/accuracy.md" target="_blank" rel="noreferrer"><span>Read the method</span><span aria-hidden="true">→</span></a></p>
   </section>
 </div>
 
