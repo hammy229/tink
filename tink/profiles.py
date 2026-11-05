@@ -56,7 +56,8 @@ class Profiles:
         pid = secrets.token_urlsafe(12)
         d = self._dir(pid)
         d.mkdir(parents=True)
-        (d / "profile.json").write_text(json.dumps({"name": name, "created": datetime.now().isoformat(timespec="minutes")}))
+        created = datetime.now().isoformat(timespec="minutes")
+        (d / "profile.json").write_text(json.dumps({"name": name, "created": created}))
         return self.get(pid)
 
     def get(self, pid: str | None) -> Profile:

@@ -16,7 +16,19 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "mypy>=2.4.1",
     "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.3",
+]
+eval = [
+    "matplotlib>=3.11.2",
+    "scikit-learn>=1.9.1",
+]
+export = [
+    "onnx>=1.23.2",
+    "onnxruntime>=1.31.1",
+    "onnxscript>=0.7.2",
 ]
 
 [tool.uv.sources]
@@ -26,3 +38,44 @@ torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "SIM", "RUF", "PTH"]
+ignore = [
+    "S101",  # asserts are how pytest works
+    "B008",  # FastAPI declares dependencies in argument defaults
+    "E731",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "E501"]
+"evals/*" = ["S"]
+"scripts/*" = ["S"]
+"deploy/*" = ["S", "E501"]
+"risk_test.py" = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["tink"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+check_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+markers = ["slow: loads the real model or runs a real benchmark"]
+
+[tool.coverage.run]
+source = ["tink"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

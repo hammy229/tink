@@ -45,7 +45,7 @@ def posterior(scores, threshold, usage, sound_cues, cues_seen, hour, temp: float
 
     final = _normalize({k: audio[k] + math.log(prior[k]) + cue[k] for k in audio})
     audio_only = _normalize(audio)
-    ranked = sorted(final, key=final.get, reverse=True)
+    ranked = sorted(final, key=lambda k: final[k], reverse=True)
     return {
         "part_of_day": bucket,
         "cues": seen,

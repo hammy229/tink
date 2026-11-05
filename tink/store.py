@@ -168,7 +168,7 @@ class Store:
         mu = everything.mean(axis=0)
         cents = _unit(np.stack([np.concatenate(self.vecs[n]).mean(axis=0) - mu for n in names]))
         s = cents @ _unit(embed(wav) - mu)
-        return {n: round(float(v), 3) for n, v in zip(names, s)}
+        return {n: round(float(v), 3) for n, v in zip(names, s, strict=False)}
 
     # ---------- calibration ----------
     @property
@@ -211,7 +211,7 @@ class Store:
         sure = conf >= 0.9
         threshold = float(np.clip((np.median(right) + np.median(wrong)) / 2, 0.1, 0.9))
         self.calib = {
-            "ready": True, "n": int(len(y)), "right": int(correct.sum()),
+            "ready": True, "n": len(y), "right": int(correct.sum()),
             "accuracy": round(float(correct.mean()), 3),
             "sure_n": int(sure.sum()), "sure_right": int((correct & sure).sum()),
             "temp": round(temp, 4), "threshold": round(threshold, 3),

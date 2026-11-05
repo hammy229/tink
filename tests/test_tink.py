@@ -67,7 +67,9 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("TINK_DATA", str(tmp_path))
     import importlib
 
-    from tink import app as app_module, profiles as profiles_module, store as store_module
+    from tink import app as app_module
+    from tink import profiles as profiles_module
+    from tink import store as store_module
     importlib.reload(store_module)
     importlib.reload(profiles_module)
     importlib.reload(app_module)
@@ -243,7 +245,9 @@ def public(tmp_path, monkeypatch):
     monkeypatch.setenv("TINK_PUBLIC", "1")
     import importlib
 
-    from tink import app as app_module, profiles as profiles_module, store as store_module
+    from tink import app as app_module
+    from tink import profiles as profiles_module
+    from tink import store as store_module
     importlib.reload(store_module)
     importlib.reload(profiles_module)
     importlib.reload(app_module)
@@ -282,7 +286,7 @@ def test_public_mode_rejects_bad_links_and_big_uploads(public):
 
 
 def test_banked_voice_is_stored_served_and_forgotten(client):
-    c, app_module, root = client
+    c, app_module, _root = client
     for i in range(2):
         enroll(c, "Hum", tone(140, seed=i), "I'm thirsty.")
         enroll(c, "Hiss", hiss(seed=i), "I'm cold.")

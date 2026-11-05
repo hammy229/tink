@@ -33,7 +33,7 @@ def loo(X, y, center):
         s = cents @ unit(X[i] - mu)
         hits += classes[int(s.argmax())] == y[i]
         right.append(s[classes.index(y[i])])
-        wrong.append(max(v for c, v in zip(classes, s) if c != y[i]))
+        wrong.append(max(v for c, v in zip(classes, s, strict=False) if c != y[i]))
     return hits / len(y), np.array(right), np.array(wrong)
 
 

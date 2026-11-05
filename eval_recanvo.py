@@ -28,7 +28,7 @@ TRIALS = 50
 
 
 def rows(root):
-    with open(root / "dataset_file_directory.csv") as f:
+    with (root / "dataset_file_directory.csv").open() as f:
         return [r for r in csv.DictReader(f) if (root / r["Filename"]).exists()]
 
 

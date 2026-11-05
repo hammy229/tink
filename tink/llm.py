@@ -57,7 +57,7 @@ async def compose(packet: dict) -> dict | None:
             r = await client.post(URL, json=body, headers={"Authorization": f"Bearer {KEY}"})
             r.raise_for_status()
             return _parse(r.json()["choices"][0]["message"]["content"])
-    except Exception as e:  # noqa: BLE001 - any failure means "use the fallback"
+    except Exception as e:
         log.warning("Grok failed, using fallback: %s", e)
         return None
 
@@ -92,6 +92,6 @@ async def translate(text: str, to: str) -> str | None:
             out = json.loads(raw.removeprefix("```json").removeprefix("```").removesuffix("```").strip())
             say = out.get("say") if isinstance(out, dict) else None
             return say.strip()[:300] if isinstance(say, str) and say.strip() else None
-    except Exception as e:  # noqa: BLE001 - any failure means "say it as typed"
+    except Exception as e:
         log.warning("Grok translate failed, saying it as typed: %s", e)
         return None
