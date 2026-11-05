@@ -7,36 +7,36 @@
   "results": [
     {
       "clients": 1,
-      "requests": 15,
+      "requests": 30,
       "errors": 0,
-      "throughput_rps": 56.92,
-      "p50_ms": 17.2,
-      "p95_ms": 18.0,
-      "p99_ms": 18.1,
-      "healthz_p95_ms": 2.1,
-      "healthz_max_ms": 2.3
+      "throughput_rps": 64.33,
+      "p50_ms": 14.9,
+      "p95_ms": 17.6,
+      "p99_ms": 17.9,
+      "healthz_p95_ms": 1.0,
+      "healthz_max_ms": 1.5
     },
     {
       "clients": 4,
-      "requests": 60,
+      "requests": 120,
       "errors": 0,
-      "throughput_rps": 58.35,
-      "p50_ms": 64.6,
-      "p95_ms": 83.9,
-      "p99_ms": 84.9,
-      "healthz_p95_ms": 3.3,
-      "healthz_max_ms": 4.1
+      "throughput_rps": 61.05,
+      "p50_ms": 64.0,
+      "p95_ms": 74.3,
+      "p99_ms": 78.4,
+      "healthz_p95_ms": 2.6,
+      "healthz_max_ms": 4.7
     },
     {
       "clients": 16,
-      "requests": 240,
+      "requests": 480,
       "errors": 0,
-      "throughput_rps": 55.93,
-      "p50_ms": 269.7,
-      "p95_ms": 352.9,
-      "p99_ms": 372.5,
-      "healthz_p95_ms": 3.8,
-      "healthz_max_ms": 12.3
+      "throughput_rps": 58.21,
+      "p50_ms": 261.7,
+      "p95_ms": 341.8,
+      "p99_ms": 483.2,
+      "healthz_p95_ms": 3.2,
+      "healthz_max_ms": 38.5
     }
   ]
 }

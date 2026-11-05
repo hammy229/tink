@@ -163,6 +163,22 @@ def render(report: dict, load: dict, gates: list[dict]) -> str:
     return "\n".join(out)
 
 
+README_START, README_END = "<!-- results:start -->", "<!-- results:end -->"
+
+
+def readme_block(report: dict) -> str:
+    b = report["benchmarks"]
+    return _table(["Benchmark", "People", "Accuracy", "Chance", "Right within 2 questions"],
+                  [[NAMES[k], str(b[k]["people"]), ci(b[k]["baseline"]), pct(b[k]["baseline"]["chance"]),
+                    pct(b[k]["baseline"]["within_2"])] for k in ORDER])
+
+
+def with_readme_block(text: str, report: dict) -> str:
+    head, rest = text.split(README_START)
+    _, tail = rest.split(README_END)
+    return f"{head}{README_START}\n{readme_block(report)}\n{README_END}{tail}"
+
+
 def figure(report: dict) -> None:
     import matplotlib
 
@@ -208,6 +224,8 @@ def load_all() -> tuple[dict, dict, list[dict]]:
 def main() -> None:
     report, load, gates = load_all()
     DOC.write_text(render(report, load, gates))
+    readme = ROOT / "README.md"
+    readme.write_text(with_readme_block(readme.read_text(), report))
     figure(report)
     print(f"wrote {DOC} and {FIGURE}")
 

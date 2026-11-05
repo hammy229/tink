@@ -1,5 +1,6 @@
 {
   "model": "voc2vec-l12.int8.onnx",
+  "sha256": "8b97cb362ed5445c6a4e6a8132e0238a35fcc8fb5fc23d5b059b8acf04374f9a",
   "bytes": 121883139,
   "layer": 12,
   "max_loss": 0.01,
@@ -13,6 +14,7 @@
         "low": -0.0018612500000000326,
         "high": 0.0001500000000000043,
         "n": 8,
+        "p": 0.1640625,
         "better": false,
         "worse": false
       },
@@ -27,6 +29,7 @@
         "low": -0.0036496598639455774,
         "high": 0.0014081632653061918,
         "n": 7,
+        "p": 0.4375,
         "better": false,
         "worse": false
       },

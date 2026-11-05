@@ -261,3 +261,26 @@ def test_head_training_is_deterministic():
     a, _ = head.train_head([task], [task], cfg)
     b, _ = head.train_head([task], [task], cfg)
     assert torch.equal(a.net[-1].weight, b.net[-1].weight)
+
+
+def test_the_pinned_browser_model_has_a_passing_gate_report():
+    """A build can't be pinned for the site unless the benchmarks were re-scored with that exact file and passed."""
+    import json
+    import re
+
+    root = Path(__file__).parent.parent
+    config = (root / "web" / "engine" / "config.js").read_text()
+    pinned = re.search(r'sha256: "([0-9a-f]{64})"', config).group(1)
+    reports = [json.loads(p.read_text()) for p in (root / "evals" / "results").glob("gate-*.json")]
+    matching = [r for r in reports if r.get("sha256") == pinned]
+    assert matching, "run evals/onnx_gate.py on the pinned model"
+    assert all(r["passes"] for r in matching)
+
+
+def test_published_numbers_match_the_raw_results():
+    from evals import render
+
+    report, load, gates = render.load_all()
+    assert render.DOC.read_text() == render.render(report, load, gates), "run: python -m evals.render"
+    readme = (render.ROOT / "README.md").read_text()
+    assert render.with_readme_block(readme, report) == readme, "run: python -m evals.render"
