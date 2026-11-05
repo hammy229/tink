@@ -115,3 +115,38 @@ def test_not_enough_sounds_is_reported_not_fatal(tmp_path, monkeypatch):
     with c.websocket_connect("/api/listen") as ws:
         send(ws, _pcm(QUIET, _sine(142), QUIET))
         assert "Teach Tink" in ws.receive_json()["error"]
+
+
+def test_idle_stream_is_closed(streaming, monkeypatch):
+    c, app_module = streaming
+    from starlette.websockets import WebSocketDisconnect
+
+    monkeypatch.setattr(app_module, "STREAM_IDLE_SECONDS", 0.05)
+    with c.websocket_connect("/api/listen") as ws, pytest.raises(WebSocketDisconnect) as e:
+        ws.receive_json()
+    assert e.value.code == 1001
+
+
+def test_public_stream_refuses_another_sites_page(tmp_path, monkeypatch):
+    monkeypatch.setenv("TINK_DATA", str(tmp_path))
+    monkeypatch.setenv("TINK_PUBLIC", "1")
+    from starlette.websockets import WebSocketDisconnect
+
+    from tink import app as app_module
+    from tink import profiles as profiles_module
+    from tink import store as store_module
+
+    importlib.reload(store_module)
+    importlib.reload(profiles_module)
+    importlib.reload(app_module)
+    try:
+        c = TestClient(app_module.app)
+        with pytest.raises(WebSocketDisconnect) as e, c.websocket_connect(
+            "/api/listen?p=x", headers={"origin": "https://evil.example"}
+        ):
+            pass
+        assert e.value.code == 4429
+    finally:
+        monkeypatch.delenv("TINK_PUBLIC")
+        importlib.reload(profiles_module)
+        importlib.reload(app_module)

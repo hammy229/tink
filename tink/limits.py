@@ -26,8 +26,10 @@ class RateLimiter:
     def _prune(self, now: float) -> None:
         for key in [k for k, q in self.hits.items() if not q or now - q[-1] > self.window]:
             del self.hits[key]
-        if len(self.hits) >= MAX_TRACKED:  # all active: forgetting some is better than running out of memory
-            self.hits.clear()
+        if len(self.hits) >= MAX_TRACKED:  # all active: forget the quietest, so a flood can't reset everyone's counts
+            quietest = sorted(self.hits, key=lambda k: self.hits[k][-1])[: len(self.hits) // 2]
+            for key in quietest:
+                del self.hits[key]
 
 
 def client_key(forwarded_for: str | None, peer: str | None, trust_proxy: bool) -> str:

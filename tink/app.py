@@ -8,6 +8,7 @@ Locally there is one profile and no header is needed; TINK_PUBLIC=1 turns on pro
 Concurrency: model calls and disk writes run on worker threads so the event loop stays free, and each profile
 has a lock, so one person's turns run in order while other people's keep going.
 """
+import asyncio
 import json
 import logging
 import os
@@ -37,7 +38,12 @@ MAX_UPLOAD = 2 * 1024 * 1024  # bytes; a 4 s clip at 48 kHz is about 400 KB
 MAX_STREAM_CHUNK = 64 * 1024  # bytes per WebSocket message, 2 s of 16 kHz PCM
 RATE = 90  # requests per minute per client, public mode only
 TRUST_PROXY = os.environ.get("TINK_TRUST_PROXY") == "1"  # set only behind a proxy you run (docker-compose does)
+STREAM_IDLE_SECONDS = 30  # a stream with no audio this long is closed
+STREAM_MAX_SECONDS = 4 * 60 * 60  # of audio per connection, in public mode
+MAX_STREAMS = 32  # open at once, in public mode
 _limiter = RateLimiter(RATE)
+_new_profiles = RateLimiter(10, window=3600)  # per client: filling the server with profiles would lock people out
+_streams = 0
 
 
 @asynccontextmanager
@@ -96,10 +102,13 @@ async def healthz():
 
 
 @app.post("/api/profiles")
-async def create_profile(name: str = Form(...)):
+async def create_profile(request: Request, name: str = Form(...)):
     name = name.strip()[:MAX_TEXT]
     if not name:
         raise HTTPException(400, "Give the profile a name, like the person's first name.")
+    peer = request.client.host if request.client else None
+    if PUBLIC and not _new_profiles.allow(client_key(request.headers.get("x-forwarded-for"), peer, TRUST_PROXY)):
+        raise HTTPException(429, "Too many new profiles from here. Try again later.")
     try:
         prof = await run_in_threadpool(profiles.create, name)
     except OverflowError as e:
@@ -224,8 +233,10 @@ async def _take_turn(prof: Profile, wav, cues: list[str], speak_in: str) -> dict
 @app.websocket("/api/listen")
 async def listen(ws: WebSocket, p: str | None = Query(None), speak_in: str = Query("English")):
     """Hands-free: send 16 kHz mono 16-bit PCM, get one JSON turn back per sound. For devices with no screen."""
+    global _streams
     peer = ws.client.host if ws.client else None
-    if PUBLIC and not _limiter.allow(client_key(ws.headers.get("x-forwarded-for"), peer, TRUST_PROXY)):
+    key = client_key(ws.headers.get("x-forwarded-for"), peer, TRUST_PROXY)
+    if PUBLIC and (not _same_origin(ws) or _streams >= MAX_STREAMS or not _limiter.allow(key)):
         await ws.close(code=4429)
         return
     try:
@@ -235,17 +246,35 @@ async def listen(ws: WebSocket, p: str | None = Query(None), speak_in: str = Que
         return
     await ws.accept()
     detector = SegmentDetector()
+    samples = 0
+    _streams += 1
     try:
         while True:
-            chunk = await ws.receive_bytes()
-            if len(chunk) > MAX_STREAM_CHUNK:
+            try:
+                chunk = await asyncio.wait_for(ws.receive_bytes(), STREAM_IDLE_SECONDS)
+            except TimeoutError:
+                await ws.close(code=1001)
+                return
+            samples += len(chunk) // 2
+            if len(chunk) > MAX_STREAM_CHUNK or (PUBLIC and samples > STREAM_MAX_SECONDS * audio.SR):
                 await ws.close(code=1009)
                 return
             pcm = np.frombuffer(chunk[: len(chunk) // 2 * 2], dtype=np.int16).astype(np.float32) / 32768
             for sound in await run_in_threadpool(detector.push, pcm):
+                if PUBLIC and not _limiter.allow(key):  # every recognized sound costs a model call, so it counts
+                    await ws.send_json({"error": "Too many sounds. Wait a minute and try again."})
+                    continue
                 await ws.send_json(await _stream_turn(prof, sound, speak_in))
     except WebSocketDisconnect:
         return
+    finally:
+        _streams -= 1
+
+
+def _same_origin(ws: WebSocket) -> bool:
+    """Devices send no Origin. A browser always does, so another site's page can't drive someone's stream."""
+    origin = ws.headers.get("origin")
+    return origin is None or origin.split("://")[-1] == ws.headers.get("host")
 
 
 async def _stream_turn(prof: Profile, sound, speak_in: str) -> dict:
@@ -300,7 +329,8 @@ async def confirm(name: str = Form(...), prof: Profile = Depends(profile)):
             raise HTTPException(404, f"No sound called {name!r}.")
         heard, prof.heard = prof.heard, None  # one confirmation teaches one clip, however many times it's pressed
         learned = False
-        if heard and heard[0] == name:
+        full = PUBLIC and len(prof.store.sounds[name]["takes"]) >= MAX_TAKES
+        if heard and heard[0] == name and not full:
             learned = await run_in_threadpool(prof.store.learn_confirmed, name, heard[1])
     return {"ok": True, "usage": prof.store.usage.get(name, {}), "learned": learned}
 
