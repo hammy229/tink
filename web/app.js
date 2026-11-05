@@ -28,14 +28,16 @@
   // ---------- API ----------
   // ---------- Profile ----------
   // On a hosted Tink each person has a profile; its id is a private link (?p=...). Locally there is none.
-  let profileId = new URLSearchParams(location.search).get("p");
+  // The id lives in the URL fragment, which browsers never send to any server or put in access logs.
+  // Old ?p= links still work, and get moved on first use.
+  let profileId = new URLSearchParams(location.hash.slice(1)).get("p") || new URLSearchParams(location.search).get("p");
   try { profileId = profileId || localStorage.getItem("tink.profile"); } catch {}
   let isPublic = false;
   const NO_PROFILE = /Create a profile first|No profile with that link|profile link is not valid/;
   function useProfile(id) {
     profileId = id;
     try { localStorage.setItem("tink.profile", id); } catch {}
-    const u = new URL(location.href); u.searchParams.set("p", id); history.replaceState(null, "", u);
+    const u = new URL(location.href); u.searchParams.delete("p"); u.hash = `p=${id}`; history.replaceState(null, "", u);
   }
 
   // With no server behind the page, the model runs in this browser (web/engine/localapi.js) behind the same API.
@@ -69,6 +71,7 @@
     $("profileChip").hidden = !isPublic;
     if (isPublic) $("profileName").textContent = r.profile.name;
     renderSelfTest(r.calibration || {});
+    if (r.storage_failed) $("err").textContent = "This browser wouldn't save your sounds. They'll be gone when you close the page.";
     $("mode").textContent = llmModel ? `voc2vec + ${llmModel}` : "voc2vec";
     $("leavesNote").textContent = local
       ? "Everything stays in this browser. The model runs on your device, and no audio is ever uploaded."
@@ -88,7 +91,7 @@
       return;
     }
     const sure = c.sure_n ? ` When it was 90% sure or more, it was right <b>${c.sure_right} of ${c.sure_n}</b>.` : "";
-    el.innerHTML = `Self-test on your ${c.n} takes: right on <b>${c.right}</b> (<span class="conf">${pct(c.accuracy)}</span>).${sure}`;
+    el.innerHTML = `Self-test on your ${c.n} takes: right on <b>${c.right}</b> (<span class="conf">${pct(c.accuracy)}</span>).${sure} Expect lower on another day, as sounds drift.`;
   }
 
   // ---------- Language ----------
@@ -151,21 +154,30 @@
   async function nextSound() {
     core = core || await import("./engine/core.js");
     detector = detector || new core.SegmentDetector();
+    detector.reset();
     if (!stream || stream.getAudioTracks().every((t) => t.readyState === "ended")) {
       stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
     }
     ctx = ctx || new AudioContext();
     if (ctx.state === "suspended") await ctx.resume();
     const src = ctx.createMediaStreamSource(stream), proc = ctx.createScriptProcessor(2048, 1, 1);
+    const rate = Math.round(ctx.sampleRate), keep = rate * 6;
+    let raw = [], rawLength = 0; // the mic's own samples, so a finished sound gets resampled once, as a whole
     return new Promise((resolve, reject) => {
       const finish = (fn) => { proc.onaudioprocess = null; src.disconnect(); proc.disconnect(); setLevel(0); fn(); };
       proc.onaudioprocess = (e) => {
         if (!$("loop").checked) return finish(() => reject(new Error("stopped")));
-        const d = e.inputBuffer.getChannelData(0);
+        const d = new Float32Array(e.inputBuffer.getChannelData(0));
         let sum = 0; for (const v of d) sum += v * v;
         setLevel(Math.min(1, Math.sqrt(sum / d.length) * 12));
-        const [sound] = detector.push(core.toModelRate(new Float32Array(d), Math.round(ctx.sampleRate)));
-        if (sound) finish(() => resolve(new Blob([core.encodeWav(sound)], { type: "audio/wav" })));
+        raw.push(d); rawLength += d.length;
+        while (rawLength - raw[0].length > keep) rawLength -= raw.shift().length;
+        const [sound] = detector.push(core.decimate(d, rate));
+        if (!sound) return;
+        const whole = new Float32Array(rawLength);
+        let at = 0; for (const c of raw) { whole.set(c, at); at += c.length; }
+        const clip = whole.subarray(Math.max(0, rawLength - Math.ceil((sound.length * rate) / core.SR)));
+        finish(() => resolve(new Blob([core.encodeWav(core.toModelRate(clip, rate))], { type: "audio/wav" })));
       };
       src.connect(proc); proc.connect(ctx.destination);
     });
@@ -253,6 +265,10 @@
   // Message banking: while the person can still speak, they record each phrase in their own voice.
   // Tink plays that recording instead of a synthetic voice whenever the sound is heard.
   const voiceCache = new Map();
+  const forgetVoice = (name) => {
+    if (voiceCache.has(name)) URL.revokeObjectURL(voiceCache.get(name));
+    voiceCache.delete(name);
+  };
   let voiced = new Set(), player = null, lastVoiceName = null;
   async function playVoice(name) {
     if (muted) return;
@@ -520,7 +536,7 @@
     } else if (no) {
       no.closest(".confirm-row").remove();
     } else if (yes) {
-      try { await api(`/api/sounds/${encodeURIComponent(yes.dataset.name)}`, { method: "DELETE" }); await refresh(); }
+      try { await api(`/api/sounds/${encodeURIComponent(yes.dataset.name)}`, { method: "DELETE" }); forgetVoice(yes.dataset.name); await refresh(); }
       catch (err) { $("err").textContent = err.message; }
     }
   });
@@ -616,7 +632,7 @@
       const fd = new FormData();
       fd.append("name", name); fd.append("audio", clip, "voice.wav");
       await api("/api/voice", { method: "POST", body: fd });
-      voiceCache.delete(name);
+      forgetVoice(name);
       chime(true);
       await refresh(name);
       setStage("idle", "Voice banked");
@@ -782,7 +798,8 @@
   function offerBrowserModel() {
     setStage("idle", "Runs on your device");
     phrase.textContent = "Try Tink in this browser.";
-    why.innerHTML = 'The model runs on your device, so no audio is ever uploaded. It downloads once (about <span id="modelSize">120</span> MB).<br><button class="btn listen" id="startLocal" type="button">Load the model</button><br><span class="note">Or run the full server: <code>git clone https://github.com/hammy229/tink && cd tink && uv run uvicorn tink.app:app</code></span>';
+    why.setAttribute("role", "status");
+    why.innerHTML = 'The model runs on your device, so no audio is ever uploaded. It downloads once (about 122 MB).<br><button class="btn listen" id="startLocal" type="button">Load the model</button><br><span class="note">Or run the full server: <code>git clone https://github.com/hammy229/tink && cd tink && uv run uvicorn tink.app:app</code></span>';
     $("startLocal").addEventListener("click", startBrowserModel);
     let agreed = false;
     try { agreed = localStorage.getItem("tink.localModel") === "1"; } catch {}
@@ -791,12 +808,15 @@
   async function startBrowserModel() {
     const button = $("startLocal");
     if (button) button.disabled = true;
-    why.setAttribute("role", "status");
+    let announced = -1;
     try {
       const { LocalApi } = await import("./engine/localapi.js");
       local = await LocalApi.start({
         onProgress: (loaded, total, cached) => {
           setStage("listening", cached ? "Loading the model" : "Downloading the model");
+          const tenth = Math.floor((loaded / total) * 10); // often enough to watch, not so often a screen reader never stops
+          if (tenth === announced) return;
+          announced = tenth;
           why.textContent = cached ? "Found in this browser's cache." : `${Math.round(loaded / 1e6)} of ${Math.round(total / 1e6)} MB. This happens once.`;
         },
       });
@@ -809,11 +829,15 @@
       why.textContent = `Model ready in ${(local.loadInfo.ms / 1000).toFixed(1)} s, running on this device.`;
       window.dispatchEvent(new CustomEvent("tink:local-ready", { detail: { ...local.loadInfo, timings: local.timings } }));
     } catch (e) {
+      local?.stop();
       local = null;
+      document.body.classList.remove("in-browser");
+      document.body.classList.add("no-server");
       setStage("error", "Couldn't load the model");
       phrase.textContent = "The model didn't load.";
       why.innerHTML = `${esc(e.message)}<br><button class="btn listen" id="startLocal" type="button">Try again</button>`;
       $("startLocal").addEventListener("click", startBrowserModel);
+      $("startLocal").focus();
     }
   }
 

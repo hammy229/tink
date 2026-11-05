@@ -9,6 +9,7 @@ export const ROLES = ["yes", "no", "background"];
 export const MIN_SOUNDS = 2;
 export const MAX_TEXT = 80;
 export const MAX_LEARNED_TAKES = 30;
+export const MAX_SECONDS = 30;
 export const DEFAULT_THRESHOLD = 0.5;
 export const DEFAULT_TEMP = 0.1;
 export const ASK_BELOW = 0.6;
@@ -101,6 +102,15 @@ export function resamplePoly(x, up, down) {
 }
 
 export const toModelRate = (samples, rate) => (rate === SR ? samples : resamplePoly(samples, SR, rate));
+
+// Good enough to measure loudness, and cheap enough to run on every audio callback. For recognition, use toModelRate
+// on the whole clip: resampling block by block leaves a dip at every block edge.
+export function decimate(samples, rate) {
+  if (rate === SR) return samples;
+  const out = new Float32Array(Math.floor((samples.length * SR) / rate));
+  for (let i = 0; i < out.length; i++) out[i] = samples[Math.floor((i * rate) / SR)];
+  return out;
+}
 
 function frameRms(wav, frame) {
   const n = Math.floor(wav.length / frame), out = new Float64Array(n);
@@ -213,12 +223,14 @@ const median = (xs) => {
 };
 const TEMPS = Array.from({ length: 50 }, (_, i) => 0.04 * (1 / 0.04) ** (i / 49));
 
-export function calibrate(vecs) {
+// `learned` is {name: count}: the newest takes of a sound that came from a confirmation. They aren't tested on, since
+// they were picked because Tink already got them right.
+export function calibrate(vecs, learned = {}) {
   const names = Object.keys(vecs).filter((n) => vecs[n].length);
   const S = [], y = [];
   names.forEach((n, si) => {
     if (vecs[n].length < 2) return;
-    vecs[n].forEach((held, ti) => {
+    vecs[n].slice(0, vecs[n].length - (learned[n] ?? 0)).forEach((held, ti) => {
       const kept = Object.fromEntries(names.map((m) => [m, vecs[m].filter((_, j) => !(m === n && j === ti))]));
       const { mu, cents } = centroids(kept, names);
       const q = unitInPlace(minus(held[0], mu));
@@ -373,6 +385,14 @@ export class SegmentDetector {
   flush() {
     const done = this.current ? this.finish() : null;
     return done ? [done] : [];
+  }
+
+  // Forget anything half-heard across a gap in listening, but keep what it learned about the room.
+  reset() {
+    this.buffer = new Float32Array(0);
+    this.before = [];
+    this.current = null;
+    this.above = this.quiet = this.loud = 0;
   }
 
   threshold() { return Math.max(this.cfg.floorMin, this.floor ?? 0) * this.cfg.ratio; }

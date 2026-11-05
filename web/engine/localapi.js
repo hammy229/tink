@@ -41,14 +41,32 @@ class Kv {
 
 class HttpError extends Error {}
 
+function parseCues(form) {
+  try {
+    const cues = JSON.parse(String(form.get("cues") ?? "[]"));
+    return Array.isArray(cues) ? cues : [];
+  } catch {
+    return []; // bad cues are the same as no cues, as on the server
+  }
+}
+
 export class LocalApi {
   constructor(worker, kv, state, model) {
     this.worker = worker; this.kv = kv; this.state = state; this.model = model;
-    this.calib = core.calibrate(state.vecs);
+    this.calib = core.calibrate(state.vecs, Object.fromEntries(Object.entries(state.sounds).filter(([, s]) => s.learned).map(([n, s]) => [n, s.learned])));
     this.pending = null;
     this.waiting = new Map();
     this.nextId = 0;
     this.timings = [];
+    this.queue = Promise.resolve();
+    this.storageFailed = false;
+    // A crashed worker never answers, so fail what's waiting instead of hanging the page.
+    const crashed = () => {
+      for (const job of this.waiting.values()) job.reject(new Error("The model stopped working. Reload the page."));
+      this.waiting.clear();
+    };
+    worker.addEventListener("error", crashed);
+    worker.addEventListener("messageerror", crashed);
     worker.addEventListener("message", ({ data }) => {
       if (data.type !== "embedding" && data.type !== "error") return;
       const job = this.waiting.get(data.id);
@@ -71,7 +89,7 @@ export class LocalApi {
       worker.addEventListener("message", listen);
       worker.addEventListener("error", (e) => reject(new Error(e.message || "The model worker failed to start.")));
       worker.postMessage({ type: "load", model, ortVersion: ORT_VERSION });
-    });
+    }).catch((e) => { worker.terminate(); throw e; }); // each failed try would otherwise keep the whole model in memory
     const kv = await Kv.open();
     let state = await kv.get("state").catch(() => null);
     if (!state || state.model !== model.tag) state = { model: model.tag, sounds: {}, usage: {}, vecs: {} };
@@ -88,12 +106,21 @@ export class LocalApi {
     });
   }
 
-  async save() { await this.kv.set("state", this.state).catch(() => {}); }
+  async save() {
+    await this.kv.set("state", this.state).catch(() => { this.storageFailed = true; });
+  }
+
+  stop() { this.worker.terminate(); }
+
+  learned() {
+    return Object.fromEntries(Object.entries(this.state.sounds).filter(([, s]) => s.learned).map(([n, s]) => [n, s.learned]));
+  }
 
   async clip(form) {
     const file = form.get("audio");
     if (!file) throw new HttpError("No audio in the request.");
     const { samples, rate } = core.decodeWav(await file.arrayBuffer());
+    if (samples.length / rate > core.MAX_SECONDS) throw new HttpError("That recording is too long. Keep each sound under a few seconds.");
     return core.trim(core.toModelRate(samples, rate));
   }
 
@@ -110,12 +137,14 @@ export class LocalApi {
       cues: core.CUES,
       llm: { on: false, model: "" },
       profile: { id: "local", name: "This browser", public: false },
+      storage_failed: this.storageFailed,
     };
   }
 
   async enroll(form) {
     const name = String(form.get("name") ?? "").trim(), phrase = String(form.get("phrase") ?? "").trim();
     if (!name || !phrase) throw new HttpError("Both the sound name and the phrase are required.");
+    if (name in {}) throw new HttpError("Pick a different name for this sound.");
     if (name.length > core.MAX_TEXT || phrase.length > core.MAX_TEXT) throw new HttpError(`Keep the sound name and phrase under ${core.MAX_TEXT} characters.`);
     const role = String(form.get("role") ?? "");
     const wav = await this.clip(form);
@@ -125,15 +154,14 @@ export class LocalApi {
     const { sounds, vecs } = this.state;
     const s = (sounds[name] ??= { phrase, cues: [] });
     s.phrase = phrase;
-    const cues = JSON.parse(String(form.get("cues") ?? "[]"));
-    s.cues = Array.isArray(cues) ? cues.filter((c) => core.CUES.includes(c)) : [];
+    s.cues = parseCues(form).filter((c) => core.CUES.includes(c));
     if (core.ROLES.includes(role)) {
       for (const other of Object.values(sounds)) if (other.role === role) delete other.role;
       s.role = role;
     } else delete s.role;
     s.urgent = form.get("urgent") === "true" && s.role !== "background";
     (vecs[name] ??= []).push(rows);
-    this.calib = core.calibrate(vecs);
+    this.calib = core.calibrate(vecs, this.learned());
     await this.save();
     return { name, takes: vecs[name].length };
   }
@@ -147,9 +175,7 @@ export class LocalApi {
     if (!Object.keys(sc).length) throw new HttpError(`Teach Tink at least ${core.MIN_SOUNDS} sounds first, so it can tell them apart.`);
     const now = new Date();
     const cueMap = Object.fromEntries(Object.entries(sounds).map(([n, s]) => [n, s.cues ?? []]));
-    let cues = [];
-    try { cues = JSON.parse(String(form.get("cues") ?? "[]")); } catch { /* bad cues are the same as no cues */ }
-    const post = core.posterior(sc, this.calib.threshold ?? core.DEFAULT_THRESHOLD, usage, cueMap, Array.isArray(cues) ? cues : [], now.getHours(), this.calib.temp ?? core.DEFAULT_TEMP);
+    const post = core.posterior(sc, this.calib.threshold ?? core.DEFAULT_THRESHOLD, usage, cueMap, parseCues(form), now.getHours(), this.calib.temp ?? core.DEFAULT_TEMP);
     const ranked = post.ranked;
     const view = {
       phrase: Object.fromEntries(Object.entries(sounds).map(([n, s]) => [n, s.phrase])),
@@ -208,8 +234,10 @@ export class LocalApi {
     if (sounds[name].role === "background" || vecs[name].length >= core.MAX_LEARNED_TAKES) return false;
     const rows = [];
     for (const variant of [wav, ...core.augment(wav)]) rows.push(await this.embed(variant));
+    if (!sounds[name]) return false; // forgotten while the clip was being embedded
     vecs[name].push(rows);
-    this.calib = core.calibrate(vecs);
+    sounds[name].learned = (sounds[name].learned ?? 0) + 1;
+    this.calib = core.calibrate(vecs, this.learned());
     return true;
   }
 
@@ -218,7 +246,7 @@ export class LocalApi {
     if (!sounds[name]) throw new HttpError(`No sound called "${name}".`);
     delete sounds[name]; delete vecs[name]; delete usage[name];
     await this.kv.del(`voice:${name}`).catch(() => {});
-    this.calib = core.calibrate(vecs);
+    this.calib = core.calibrate(vecs, this.learned());
     await this.save();
     return { ok: true };
   }
@@ -231,7 +259,15 @@ export class LocalApi {
   }
 
   // Same shape as app.js's api(): resolves with the JSON body, or throws with the server's message.
-  async request(path, opts = {}) {
+  // One at a time, like the server's per-profile lock: the model can't run two calls at once, and a Forget in the
+  // middle of a Teach must wait its turn.
+  request(path, opts = {}) {
+    const run = this.queue.then(() => this.route(path, opts));
+    this.queue = run.catch(() => {});
+    return run;
+  }
+
+  async route(path, opts) {
     const method = opts.method ?? "GET", body = opts.body;
     if (path === "/api/sounds" && method === "GET") return this.sounds();
     if (path === "/api/enroll") return this.enroll(body);
