@@ -12,6 +12,7 @@ services:
     environment:
       TINK_PUBLIC: "1"
       TINK_DATA: /data
+      TINK_TRUST_PROXY: "1"  # only Caddy can reach this container
     volumes:
       - tink-data:/data
 
