@@ -78,8 +78,8 @@
       : isPublic
       ? `Recordings go only to this Tink server, kept under your private link. Video never leaves your browser.${llmModel ? ` Only the text below goes to ${llmModel}.` : ""}`
       : llmModel
-      ? `Audio and video never leave this laptop. Only the text below goes to ${llmModel}.`
-      : "Everything stays on this laptop: every sound, every banked voice, every word.";
+      ? `Audio and video never leave this device. Only the text below goes to ${llmModel}.`
+      : "Everything stays on this device: every sound, every banked voice, every word.";
     renderSounds(lit);
   }
 

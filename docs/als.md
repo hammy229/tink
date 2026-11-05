@@ -14,7 +14,7 @@ Other features that matter for ALS:
 - **Urgent sounds** (e.g. "I can't breathe") set off a red screen and an alarm. They fire at a lower confidence than other sounds, because a missed alarm costs more than a false one.
 - **Yes/no sounds.** When two meanings are close, Tink asks, and the person answers with their own yes and no sounds.
 - **Answer-back.** The caregiver types a reply and Tink speaks it.
-- **Privacy.** Sounds and banked voices stay on the laptop.
+- **Privacy.** Sounds and banked voices stay on the device. In the browser build, nothing is ever uploaded.
 
 ## Where it is in the code
 

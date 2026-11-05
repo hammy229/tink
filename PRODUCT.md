@@ -25,15 +25,15 @@ Tink is built on voc2vec (Koudounas et al., ICASSP 2025), a model pretrained onl
 
 ## Operating Context
 
-- Runs locally on a laptop (FastAPI + browser). Mic audio goes only to the local server; face cues are computed in the browser; only text (meanings, probabilities, time, cue names, target language) goes to the LLM.
+- Runs entirely in the browser (ONNX Runtime Web), or on a local server (FastAPI + browser). Mic audio goes only to the local server; face cues are computed in the browser; only text (meanings, probabilities, time, cue names, target language) goes to the LLM.
 - Built at HackTX 26 (theme: fairy tales). The name and identity come from Tinker Bell, who speaks only in chimes that Peter understands.
-- Judged mainly in a projected pitch: the screen is read from across a room.
+- Often used with a caregiver in the room, so the screen should be readable from across it.
 
 ## Capabilities and Constraints
 
 - Teach a sound (name, phrase in any language, optional face cues, about 5 takes); listen; Bayesian ranking over taught sounds plus "unknown"; time-of-day prior that learns from "Right"; webcam cues (nod, shake, smile, frown, eyes closed); Grok wording and translation into the chosen spoken language, with taught-phrase fallback; browser speech synthesis output.
 - Plain HTML/CSS/JS frontend, no build step. Element ids in `web/index.html` are the contract with `web/app.js`.
-- Accuracy on real users is not yet measured. Do not claim accuracy numbers until `risk_test.py` has run on real recordings.
+- Accuracy with real users of the product is not yet measured. Benchmarks on existing datasets are in `docs/results.md`. Never present them as real-world accuracy.
 
 ## Brand Commitments
 
