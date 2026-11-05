@@ -8,3 +8,7 @@ data/
 # design review captures stay local
 .impeccable/review/
 .impeccable/questions/
+.coverage
+htmlcov/
+models/
+*.onnx

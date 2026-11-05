@@ -5,7 +5,8 @@ Layout:
                                               "takes": ["low-hum-3f9a2c/8b1e04d2.wav"]}}
     data/usage.json              {"Low hum": {"afternoon": 3}}   confirmed uses per part of day (Bayesian prior)
     data/takes/<dir>/<id>.wav    16 kHz mono clips; <dir> is unique per sound so similar names never collide
-Embeddings are recomputed from the clips at startup, so changing TINK_LAYER needs no migration.
+    data/takes/<dir>/<id>.<tag>.npy   cached embeddings; <tag> names the model, layer, and augmentation, so
+                                 changing any of them re-embeds from the clips and needs no migration.
 
 Each take is stored as a small matrix: row 0 is the take itself, the other rows are its augmented variants
 (audio.augment). A sound's centroid averages every row of every take.
@@ -14,10 +15,13 @@ After every change, calibrate() runs a self-test: each original take is held out
 so it can't recognise itself) and matched against the rest. That fits the softmax temperature and the
 "didn't catch it" threshold to this person's sounds, and reports how often Tink was right.
 """
+import hashlib
+import io
 import json
 import os
 import re
 import shutil
+import tempfile
 import uuid
 from pathlib import Path
 
@@ -25,7 +29,8 @@ import numpy as np
 
 from . import audio
 from .bayes import CUES, part_of_day
-from .embed import embed
+from .embed import LAYER as EMBED_LAYER
+from .embed import MODEL_ID, embed
 
 DATA = Path(os.environ.get("TINK_DATA", "data"))
 THRESHOLD = float(os.environ.get("TINK_THRESHOLD", "0.5"))  # fallback until calibration has enough takes
@@ -48,6 +53,27 @@ def _read(path: Path) -> dict:
     return json.loads(path.read_text()) if path.exists() else {}
 
 
+def atomic_write(path: Path, data: bytes) -> None:
+    """Write to a temp file, then rename over the target: a crash leaves the old file or the new one, never half."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+            f.flush()
+            os.fsync(f.fileno())
+        Path(tmp).replace(path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
+
+
+def cache_tag() -> str:
+    """Names what produced an embedding. Anything that changes the vectors must change this."""
+    raw = f"{MODEL_ID}|{EMBED_LAYER}|{AUGMENT}|v1"
+    return hashlib.sha256(raw.encode()).hexdigest()[:12]
+
+
 class Store:
     def __init__(self, root: Path = DATA):
         self.root = root
@@ -56,7 +82,7 @@ class Store:
         self.vecs: dict[str, list[np.ndarray]] = {}  # per take: (1 + variants, dim)
         for name, s in self.sounds.items():
             s["takes"] = [t for t in s["takes"] if (root / "takes" / t).exists()]  # survive a lost file
-            self.vecs[name] = [self._take_vecs(audio.load(root / "takes" / t)) for t in s["takes"]]
+            self.vecs[name] = [self._cached_vecs(root / "takes" / t) for t in s["takes"]]
         if not self.vecs:
             embed(np.zeros(audio.SR // 2, np.float32))  # load the model now, not on the first request
         self.calib: dict = {}
@@ -67,10 +93,24 @@ class Store:
         variants = audio.augment(wav) if AUGMENT else []
         return np.stack([embed(w) for w in [wav, *variants]])
 
+    def _cached_vecs(self, take: Path) -> np.ndarray:
+        cache = take.with_suffix(f".{cache_tag()}.npy")
+        try:
+            return np.load(cache, allow_pickle=False)
+        except (OSError, ValueError, EOFError):  # missing, truncated, or not numpy: rebuild from the clip
+            vec = self._take_vecs(audio.load(take))
+            self._write_cache(cache, vec)
+            return vec
+
+    @staticmethod
+    def _write_cache(cache: Path, vec: np.ndarray) -> None:
+        buf = io.BytesIO()
+        np.save(buf, vec, allow_pickle=False)
+        atomic_write(cache, buf.getvalue())
+
     def _save(self):
-        self.root.mkdir(parents=True, exist_ok=True)
-        (self.root / "sounds.json").write_text(json.dumps(self.sounds, indent=2))
-        (self.root / "usage.json").write_text(json.dumps(self.usage, indent=2))
+        atomic_write(self.root / "sounds.json", json.dumps(self.sounds, indent=2).encode())
+        atomic_write(self.root / "usage.json", json.dumps(self.usage, indent=2).encode())
 
     def all(self) -> list[dict]:
         return [
@@ -110,8 +150,8 @@ class Store:
             s["urgent"] = urgent and s.get("role") != "background"
         rel = f"{s['dir']}/{uuid.uuid4().hex[:8]}.wav"
         path = self.root / "takes" / rel
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(audio.to_wav_bytes(wav))
+        atomic_write(path, audio.to_wav_bytes(wav))
+        self._write_cache(path.with_suffix(f".{cache_tag()}.npy"), vec)
         s["takes"].append(rel)
         self.vecs.setdefault(name, []).append(vec)
         self._save()
@@ -126,8 +166,7 @@ class Store:
             return False
         s.setdefault("dir", f"{slug(name)[:40]}-{uuid.uuid4().hex[:6]}")
         rel = f"{s['dir']}/voice.wav"
-        (self.root / "takes" / s["dir"]).mkdir(parents=True, exist_ok=True)
-        (self.root / "takes" / rel).write_bytes(audio.to_wav_bytes(wav))
+        atomic_write(self.root / "takes" / rel, audio.to_wav_bytes(wav))
         s["voice"] = rel
         self._save()
         return True
