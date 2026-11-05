@@ -8,7 +8,6 @@ export const UNKNOWN = "unknown";
 export const ROLES = ["yes", "no", "background"];
 export const MIN_SOUNDS = 2;
 export const MAX_TEXT = 80;
-export const MAX_LEARNED_TAKES = 30;
 export const MAX_SECONDS = 30;
 export const DEFAULT_THRESHOLD = 0.5;
 export const DEFAULT_TEMP = 0.1;
@@ -223,14 +222,12 @@ const median = (xs) => {
 };
 const TEMPS = Array.from({ length: 50 }, (_, i) => 0.04 * (1 / 0.04) ** (i / 49));
 
-// `learned` is {name: count}: the newest takes of a sound that came from a confirmation. They aren't tested on, since
-// they were picked because Tink already got them right.
-export function calibrate(vecs, learned = {}) {
+export function calibrate(vecs) {
   const names = Object.keys(vecs).filter((n) => vecs[n].length);
   const S = [], y = [];
   names.forEach((n, si) => {
     if (vecs[n].length < 2) return;
-    vecs[n].slice(0, vecs[n].length - (learned[n] ?? 0)).forEach((held, ti) => {
+    vecs[n].forEach((held, ti) => {
       const kept = Object.fromEntries(names.map((m) => [m, vecs[m].filter((_, j) => !(m === n && j === ti))]));
       const { mu, cents } = centroids(kept, names);
       const q = unitInPlace(minus(held[0], mu));

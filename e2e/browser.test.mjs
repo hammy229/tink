@@ -136,16 +136,6 @@ test("a person can teach sounds and be understood", async () => {
   embedMs = await page.evaluate(() => window.__ready.timings);
 });
 
-test("pressing Right teaches Tink the clip it just heard", async () => {
-  await page.click("#listen");
-  await page.waitForFunction(() => document.getElementById("statusText").textContent === "Listening");
-  await page.evaluate(() => window.__mic.sound("whistle"));
-  await page.waitForSelector("#right:not([hidden])", { timeout: 60000 });
-  await page.waitForFunction(() => !document.getElementById("listen").disabled, null, { timeout: 60000 });
-  await page.click("#right");
-  await page.waitForFunction(() => /learned from that sound/.test(document.getElementById("feedbackMsg").textContent), null, { timeout: 30000 });
-});
-
 test("hands-free: turn on Keep listening once, and each sound is picked up with no button", async () => {
   await page.check("#loop");
   await page.waitForFunction(() => document.getElementById("statusText").textContent === "Listening");

@@ -454,9 +454,8 @@
   }
   $("right").addEventListener("click", async () => {
     try {
-      const r = await api("/api/confirm", { method: "POST", body: new URLSearchParams({ name: lastName }) });
-      feedbackDone(r.learned ? "Thanks. Tink learned from that sound." : "Thanks. Tink will remember this time of day.");
-      if (r.learned) await refresh(lastName);
+      await api("/api/confirm", { method: "POST", body: new URLSearchParams({ name: lastName }) });
+      feedbackDone("Thanks. Tink will remember this time of day.");
       document.querySelector(`.sound[data-name="${CSS.escape(lastName)}"]`)?.classList.add("learned");
     } catch (e) { feedbackDone(e.message); }
   });

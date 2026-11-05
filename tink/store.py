@@ -37,7 +37,6 @@ AUGMENT = os.environ.get("TINK_AUGMENT", "1") != "0"
 TEMPS = np.geomspace(0.04, 1.0, 50)  # floor: a handful of easy takes must not make Tink certain
 MIN_SOUNDS = 2  # centering needs two sounds; with one, every clip looks like a match
 MAX_TEXT = 80
-MAX_LEARNED_TAKES = 30  # stop growing a sound here: self-tests get slower, and more takes stop helping
 ROLES = ("yes", "no", "background")  # yes/no answer Tink's questions; background is the room itself
 
 
@@ -158,16 +157,6 @@ class Store:
         self.calibrate()
         return len(s["takes"])
 
-    def learn_confirmed(self, name: str, wav: np.ndarray) -> bool:
-        """Someone confirmed Tink heard this sound right, so keep the clip. Sounds drift between days, and
-        evals/run.py measures whether this helps on later days. Returns False when there's nothing to do."""
-        s = self.sounds.get(name)
-        if not s or s.get("role") == "background" or len(s["takes"]) >= MAX_LEARNED_TAKES:
-            return False
-        s["learned"] = s.get("learned", 0) + 1
-        self.add_take(name, s["phrase"], wav, None, None, None)
-        return True
-
     # Message banking: the person records the phrase in their own voice while they still can,
     # and Tink plays that recording instead of a synthetic voice.
     def set_voice(self, name: str, wav: np.ndarray) -> bool:
@@ -235,9 +224,7 @@ class Store:
         for si, n in enumerate(names):
             if len(self.vecs[n]) < 2:
                 continue
-            # Learned takes were picked because Tink already got them right, so testing on them would only flatter it.
-            taught = len(self.vecs[n]) - self.sounds.get(n, {}).get("learned", 0)
-            for ti, held in enumerate(self.vecs[n][:taught]):
+            for ti, held in enumerate(self.vecs[n]):
                 kept = {m: [v for j, v in enumerate(self.vecs[m]) if not (m == n and j == ti)] for m in names}
                 mu = np.concatenate([np.concatenate(v) for v in kept.values()]).mean(axis=0)
                 cents = _unit(np.stack([np.concatenate(kept[m]).mean(axis=0) - mu for m in names]))

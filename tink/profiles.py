@@ -19,8 +19,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-import numpy as np
-
 from .store import DATA, Store
 from .turn import Pending
 
@@ -40,9 +38,6 @@ class Profile:
     store: Store
     recent: deque = field(default_factory=lambda: deque(maxlen=5))  # what Tink said lately, for the LLM
     pending: Pending | None = None  # an open yes/no question
-    # The last clip Tink recognized directly, and as what. "Right" can teach it. Never a yes or no answer: that clip
-    # is the person's yes sound, not the sound the question was about.
-    heard: tuple[str, np.ndarray] | None = None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)  # one turn at a time, per person
 
 
