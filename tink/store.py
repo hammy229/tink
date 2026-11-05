@@ -160,10 +160,11 @@ class Store:
 
     def learn_confirmed(self, name: str, wav: np.ndarray) -> bool:
         """Someone confirmed Tink heard this sound right, so keep the clip. Sounds drift between days, and
-        evals/run.py shows this tracks the drift. Returns False when there's nothing to do."""
+        evals/run.py measures whether this helps on later days. Returns False when there's nothing to do."""
         s = self.sounds.get(name)
         if not s or s.get("role") == "background" or len(s["takes"]) >= MAX_LEARNED_TAKES:
             return False
+        s["learned"] = s.get("learned", 0) + 1
         self.add_take(name, s["phrase"], wav, None, None, None)
         return True
 
@@ -234,7 +235,9 @@ class Store:
         for si, n in enumerate(names):
             if len(self.vecs[n]) < 2:
                 continue
-            for ti, held in enumerate(self.vecs[n]):
+            # Learned takes were picked because Tink already got them right, so testing on them would only flatter it.
+            taught = len(self.vecs[n]) - self.sounds.get(n, {}).get("learned", 0)
+            for ti, held in enumerate(self.vecs[n][:taught]):
                 kept = {m: [v for j, v in enumerate(self.vecs[m]) if not (m == n and j == ti)] for m in names}
                 mu = np.concatenate([np.concatenate(v) for v in kept.values()]).mean(axis=0)
                 cents = _unit(np.stack([np.concatenate(kept[m]).mean(axis=0) - mu for m in names]))

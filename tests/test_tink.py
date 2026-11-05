@@ -350,3 +350,12 @@ def test_learning_stops_at_the_cap(client, monkeypatch):
     monkeypatch.setitem(app_module.store.__class__.learn_confirmed.__globals__, "MAX_LEARNED_TAKES", 3)
     c.post("/api/recognize", files={"audio": ("a.wav", tone(142, seed=7))})
     assert c.post("/api/confirm", data={"name": "Hum"}).json()["learned"] is False
+
+
+def test_learned_takes_dont_flatter_the_self_test(client):
+    c, _, _ = client
+    _taught(c)
+    before = c.get("/api/sounds").json()["calibration"]["n"]
+    c.post("/api/recognize", files={"audio": ("a.wav", tone(142, seed=7))})
+    assert c.post("/api/confirm", data={"name": "Hum"}).json()["learned"] is True
+    assert c.get("/api/sounds").json()["calibration"]["n"] == before
