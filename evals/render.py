@@ -13,11 +13,12 @@ DOC = ROOT / "docs" / "results.md"
 FIGURE = ROOT / "docs" / "figures" / "accuracy.svg"
 
 NAMES = {
-    "dysarthric_other_session": "Dysarthric speech, tested on another day",
-    "controls_other_session": "Control speakers, tested on another day",
+    "dysarthric_other_session": "Dysarthric speech, taught in one sitting, tested on another day",
+    "controls_other_session": "Control speakers, taught in one sitting, tested on another day",
     "dysarthric": "Dysarthric speech, any session",
     "controls": "Control speakers, any session",
-    "recanvo": "Spontaneous sounds (ReCANVo), tested on another day",
+    "recanvo_one_sitting": "Spontaneous sounds, taught in one sitting, tested on another day",
+    "recanvo": "Spontaneous sounds, taught across days, tested on another day",
 }
 ORDER = list(NAMES)
 
@@ -107,9 +108,18 @@ def render(report: dict, load: dict, gates: list[dict]) -> str:
              diff(head["dysarthric"]["vs_baseline"]), "passed" if head["passes_gate"] else "failed",
              "Shipped" if head["passes_gate"] else "Not shipped"],
             ["Learning from confirmed sounds", diff(ad["recanvo"]["vs_static"]),
-             diff(ad["dysarthric_other_session"]["vs_static"]), "passed" if ad["passes_gate"] else "failed",
+             diff(ad["all_torgo_other_session"]["vs_static"]), "passed" if ad["passes_gate"] else "failed",
              "Shipped" if ad["passes_gate"] else "Not shipped"],
         ]),
+        "",
+        "## Is augmenting each take worth it",
+        "",
+        "The app enrolls each take plus 4 variants, which is 5 times the model calls. Every other table here is "
+        "without augmentation, so this is the comparison that connects them to what the app does.",
+        "",
+        _table(["Benchmark", "Off", "On", "Change"],
+               [[NAMES[k], pct(report["augmentation"][k]["off"]["mean"]), pct(report["augmentation"][k]["on"]["mean"]),
+                 diff(report["augmentation"][k]["vs_off"])] for k in ORDER]),
         "",
         "## Can Tink trust its own confidence",
         "",
@@ -126,6 +136,9 @@ def render(report: dict, load: dict, gates: list[dict]) -> str:
         _table(["Benchmark", "Shuffled accuracy", "Chance"],
                [[NAMES[k], pct(v["accuracy"]), pct(v["chance"])] for k, v in report["leakage_check"].items()]),
         "",
+        "This only proves the scoring doesn't leak. It can't catch session or mic effects, which survive a shuffle; "
+        "the tested-on-another-day benchmarks are what address those.",
+        "",
         "## The model that ships",
         "",
         "Re-embedding the benchmarks with the exact exported file, compared with PyTorch on identical episodes.",
@@ -138,7 +151,8 @@ def render(report: dict, load: dict, gates: list[dict]) -> str:
         "## One server under load",
         "",
         f"{load['machine']}, {load['clip_seconds']} s clips, {load['sounds']} sounds with "
-        f"{load['takes_per_sound']} takes each. {load['note'].capitalize()}. `/healthz` runs during the load, to show the server stays responsive.",
+        f"{load['takes_per_sound']} takes each. {load['note'].capitalize()}. "
+        "`/healthz` runs during the load, to show the server stays responsive.",
         "",
         _table(["Clients", "Requests", "Errors", "Requests per second", "p50", "p95", "p99", "/healthz p95"],
                [[str(r["clients"]), str(r["requests"]), str(r["errors"]), f"{r['throughput_rps']:.0f}",
@@ -159,7 +173,7 @@ def figure(report: dict) -> None:
     ink, muted, grid, surface, series = "#0b0b0b", "#52514e", "#e6e5e0", "#fcfcfb", "#2a78d6"
     b = report["benchmarks"]
     rows = list(reversed(ORDER))
-    fig, ax = plt.subplots(figsize=(8.6, 3.5), facecolor=surface)
+    fig, ax = plt.subplots(figsize=(10.5, 4.0), facecolor=surface)
     ax.set_facecolor(surface)
     for i, k in enumerate(rows):
         r = b[k]["baseline"]
@@ -170,7 +184,7 @@ def figure(report: dict) -> None:
     top = len(rows) - 1
     ax.annotate("chance", (b[rows[top]]["baseline"]["chance"] * 100, top + 0.26), xytext=(0, 3),
                 textcoords="offset points", ha="center", va="bottom", color=muted, fontsize=10)
-    ax.set_yticks(range(len(rows)), [NAMES[k] for k in rows], color=ink)
+    ax.set_yticks(range(len(rows)), [f"{NAMES[k]} (n={b[k]['people']})" for k in rows], color=ink, fontsize=10)
     ax.set_xlim(0, 100)
     ax.set_ylim(-0.6, len(rows) - 0.2)
     ax.set_xticks(range(0, 101, 20), [f"{v}%" for v in range(0, 101, 20)], color=muted)
@@ -180,7 +194,7 @@ def figure(report: dict) -> None:
     for spine in ax.spines.values():
         spine.set_visible(False)
     ax.set_title("Accuracy with one person's own examples (mean and 95% CI over people)", loc="left", color=ink,
-                 fontsize=12, pad=16, x=-0.82)
+                 fontsize=12, pad=16, x=-1.0)
     fig.tight_layout()
     FIGURE.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(FIGURE, facecolor=surface, metadata={"Date": None})

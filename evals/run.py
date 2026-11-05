@@ -5,7 +5,10 @@
     uv run --group eval python -m evals.run --recanvo ~/Datasets/recanvo/extracted --torgo ~/Datasets/torgo
 
 Benchmarks
-  recanvo     spontaneous sounds; 5 takes per meaning; test only on other sessions
+  recanvo     spontaneous sounds; 5 takes per meaning; test only on other sessions; each meaning can be taught on a
+              different day
+  recanvo_one_sitting
+              the same, but taught in one session, covering only the meanings that session has
   dysarthric  TORGO speakers with dysarthria; 5 words at a time, 2 takes per word, any session
   controls    TORGO matched controls; same task, shows what dysarthria costs
   dysarthric_other_session, controls_other_session
@@ -43,6 +46,7 @@ class Bench:
     trials: int
     feats: dict  # model -> memmapped (clips, layers, dim)
     aug_path: Path
+    paths: np.ndarray  # names sort by recording time within a person
 
 
 def _build(args) -> list[Bench]:
@@ -67,14 +71,18 @@ def _build(args) -> list[Bench]:
                 groups[f"{group}_other_session"][p] = (idx, torgo.labels[idx], torgo.sessions[idx])
     feats_t = {m: np.load(cache_path(torgo, m), mmap_mode="r") for m in (LOGMEL, *MODELS)}
     aug_r, aug_t = cache_path(recanvo, "voc2vec-aug"), cache_path(torgo, "voc2vec-aug")
+    paths_r, paths_t = np.array(recanvo.paths), np.array(torgo.paths)
+    one_sitting = {p: v for p, v in rec.items() if fewshot.one_sitting_meanings(v[1], v[2])}
     return [
-        Bench("recanvo", rec, fewshot.across_sessions, args.trials, feats_r, aug_r),
-        Bench("dysarthric", groups["dysarthric"], fewshot.word_episode, args.trials * 4, feats_t, aug_t),
-        Bench("controls", groups["controls"], fewshot.word_episode, args.trials * 4, feats_t, aug_t),
+        Bench("recanvo", rec, fewshot.across_sessions, args.trials, feats_r, aug_r, paths_r),
+        Bench("recanvo_one_sitting", one_sitting, fewshot.across_sessions_one_sitting, args.trials, feats_r, aug_r,
+              paths_r),
+        Bench("dysarthric", groups["dysarthric"], fewshot.word_episode, args.trials * 4, feats_t, aug_t, paths_t),
+        Bench("controls", groups["controls"], fewshot.word_episode, args.trials * 4, feats_t, aug_t, paths_t),
         Bench("dysarthric_other_session", groups["dysarthric_other_session"], fewshot.word_episode_across_sessions,
-              args.trials * 4, feats_t, aug_t),
+              args.trials * 4, feats_t, aug_t, paths_t),
         Bench("controls_other_session", groups["controls_other_session"], fewshot.word_episode_across_sessions,
-              args.trials * 4, feats_t, aug_t),
+              args.trials * 4, feats_t, aug_t, paths_t),
     ]
 
 
@@ -165,14 +173,17 @@ def augmentation(benches: list[Bench]) -> dict:
 
 def adaptive(benches: list[Bench]) -> dict:
     """Exploratory: same bar as the head, but the design was fixed after reading these same benchmarks. Learning from
-    "Right" stays only if it wins on later days on spontaneous and on deliberate sounds."""
+    "Right" stays only if later sounds benefit on spontaneous sounds and on deliberate sounds. Deliberate pools every
+    TORGO speaker across sessions, as dysarthric speakers alone are too few for the sign-flip test to ever pass."""
     out: dict = {}
+    pooled: list[tuple[float, float]] = []
     for b in benches:
         if b.name not in ("recanvo", "dysarthric_other_session", "controls_other_session"):
             continue
         ran = {p: fewshot.run_adaptive(_matrix(b, PRIMARY, APP_LAYER, p), labels, sessions, b.episode,
-                                       fewshot.person_seed(p), b.trials)
-               for p, (_, labels, sessions) in b.people.items()}
+                                       fewshot.person_seed(p), b.trials,
+                                       recorded_at=np.argsort(np.argsort(b.paths[idx])))
+               for p, (idx, labels, sessions) in b.people.items()}
         per = {p: r for p, r in ran.items() if r is not None}
         static = np.array([r["static"] for r in per.values()])
         grown = np.array([r["adaptive"] for r in per.values()])
@@ -181,7 +192,13 @@ def adaptive(benches: list[Bench]) -> dict:
                        "wrong_clips_per_episode": float(np.mean([r["wrong_clips_per_episode"] for r in per.values()])),
                        "confirmed_clips_per_episode": float(np.mean([r["confirmed_clips_per_episode"]
                                                                      for r in per.values()]))}
-    out["passes_gate"] = all(out[t]["vs_static"]["better"] for t in ("recanvo", "dysarthric_other_session"))
+        if b.name != "recanvo":
+            pooled += list(zip(grown.tolist(), static.tolist(), strict=True))
+    both = np.array(pooled)
+    out["all_torgo_other_session"] = {"people": len(both), "static": float(both[:, 1].mean()),
+                                      "adaptive": float(both[:, 0].mean()),
+                                      "vs_static": metrics.beats(both[:, 0], both[:, 1])}
+    out["passes_gate"] = out["recanvo"]["vs_static"]["better"] and out["all_torgo_other_session"]["vs_static"]["better"]
     return out
 
 
@@ -247,8 +264,13 @@ def leakage_check(benches: list[Bench]) -> dict:
                 if len(set(shuffled[usable])) < 2:
                     continue
             X = _matrix(b, PRIMARY, APP_LAYER, p)[usable]
-            rows.append(fewshot.run_person(X, shuffled[usable], sessions[usable], fewshot.centroid, b.episode,
-                                           fewshot.person_seed(p), b.trials))
+            try:
+                rows.append(fewshot.run_person(X, shuffled[usable], sessions[usable], fewshot.centroid, b.episode,
+                                               fewshot.person_seed(p), b.trials))
+            except ValueError:  # shuffling can leave this person with no episode that meets the benchmark's rules
+                continue
+        if not rows:
+            continue
         out[b.name] = {"accuracy": float(np.mean([r["accuracy"] for r in rows])),
                        "chance": float(np.mean([r["chance"] for r in rows]))}
         if out[b.name]["accuracy"] > out[b.name]["chance"] + 0.05:

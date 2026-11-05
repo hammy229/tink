@@ -123,21 +123,41 @@ def test_learning_from_confirmed_sounds_helps_when_sounds_really_drift():
             test.append(idx[sessions[idx] != "s0"])
         return fewshot.Episode(tuple(enroll), tuple(test))
 
-    r = fewshot.run_adaptive(X, y, sess, taught_on_the_first_day, 0, 20)
+    order = np.array([int(s[1]) * 1000 + i % 1000 for i, s in enumerate(sess)])
+    r = fewshot.run_adaptive(X, y, sess, taught_on_the_first_day, 0, 20, recorded_at=order)
     assert r["adaptive"] > r["static"] + 0.02
     assert r["confirmed_clips_per_episode"] > 0
 
 
 def test_a_careless_caregiver_adds_wrong_clips():
     X, y, sess = _drifting(np.random.default_rng(0))
-    assert fewshot.run_adaptive(X, y, sess, fewshot.across_sessions, 0, 10, wrong_confirm=0.0)["wrong_clips_per_episode"] == 0
-    assert fewshot.run_adaptive(X, y, sess, fewshot.across_sessions, 0, 10, wrong_confirm=0.9)["wrong_clips_per_episode"] > 0
+    assert fewshot.run_adaptive(X, y, sess, fewshot.across_sessions, 0, 10, wrong_confirm=0.0, recorded_at=np.arange(len(y)))["wrong_clips_per_episode"] == 0
+    assert fewshot.run_adaptive(X, y, sess, fewshot.across_sessions, 0, 10, wrong_confirm=0.9, recorded_at=np.arange(len(y)))["wrong_clips_per_episode"] > 0
 
 
-def test_learning_needs_more_than_one_later_session():
-    X, y, _sess = blobs(2.0)
-    one_day = np.full(len(y), "s0")
-    assert fewshot.run_adaptive(X, y, one_day, fewshot.word_episode, 0, 5) is None
+def test_learning_runs_within_a_single_session():
+    labels = np.repeat([f"c{i}" for i in range(5)], 6)
+    X = np.random.default_rng(0).normal(size=(30, 8)).astype(np.float32)
+    r = fewshot.run_adaptive(X, labels, np.full(30, "s0"), fewshot.word_episode, 0, 5, recorded_at=np.arange(30))
+    assert r is not None and r["episodes"] == 5
+
+
+def test_learning_confirms_earlier_clips_and_scores_later_ones():
+    """Reversing the clock must change the result, or time order isn't really being used."""
+    X, y, sess = _drifting(np.random.default_rng(0))
+    forward = np.array([int(s[1]) * 1000 + i % 1000 for i, s in enumerate(sess)])
+    a = fewshot.run_adaptive(X, y, sess, fewshot.across_sessions, 0, 10, recorded_at=forward)
+    b = fewshot.run_adaptive(X, y, sess, fewshot.across_sessions, 0, 10, recorded_at=-forward)
+    assert a != b
+
+
+def test_one_sitting_episode_uses_one_session_and_tests_elsewhere():
+    _, y, sess = blobs(1.0)
+    rng = np.random.default_rng(0)
+    for _ in range(30):
+        ep = fewshot.across_sessions_one_sitting(y, sess, rng)
+        assert len(ep.enroll) >= 2 and len({sess[i] for e in ep.enroll for i in e}) == 1
+        assert not {sess[i] for e in ep.enroll for i in e} & {sess[i] for t in ep.test for i in t}
 
 
 def test_sign_flip_test_is_exact():

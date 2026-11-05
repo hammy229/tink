@@ -65,6 +65,32 @@ def word_episode(labels: np.ndarray, _sessions: np.ndarray, rng: np.random.Gener
     return Episode(tuple(enroll), tuple(test))
 
 
+def one_sitting_meanings(labels: np.ndarray, sessions: np.ndarray) -> dict:
+    """Sessions where someone could teach at least 2 meanings, and which ones. Spontaneous recordings rarely hold
+    every meaning in one sitting, so each episode here covers only what that sitting allows."""
+    out: dict = {}
+    for s in set(sessions):
+        here = sessions == s
+        taught = sorted(c for c in set(labels) if (here & (labels == c)).sum() >= RECANVO_TAKES
+                        and (~here & (labels == c)).any())
+        if len(taught) >= 2:
+            out[s] = taught
+    return out
+
+
+def across_sessions_one_sitting(labels: np.ndarray, sessions: np.ndarray, rng: np.random.Generator) -> Episode:
+    """Like across_sessions, but every meaning is taught in the same sitting, as in the app."""
+    choices = one_sitting_meanings(labels, sessions)
+    s = rng.choice(sorted(choices))
+    enroll, test = [], []
+    for c in choices[s]:
+        idx = np.flatnonzero(labels == c)
+        enroll.append(rng.choice(idx[sessions[idx] == s], RECANVO_TAKES, replace=False))
+        pool = idx[sessions[idx] != s]
+        test.append(rng.choice(pool, min(RECANVO_TEST_PER_CLASS, len(pool)), replace=False))
+    return Episode(tuple(enroll), tuple(test))
+
+
 def session_word_options(labels: np.ndarray, sessions: np.ndarray) -> dict:
     """For each word, the sessions with enough takes to enroll from and at least one take elsewhere to test on."""
     options = {}
@@ -180,13 +206,15 @@ MAX_LEARNED = 30  # same cap as tink.store.MAX_LEARNED_TAKES
 
 
 def run_adaptive(X, labels, sessions, episode: EpisodeFn, seed: int, trials: int,
-                 wrong_confirm: float = 0.1) -> dict | None:
+                 recorded_at: np.ndarray, wrong_confirm: float = 0.1) -> dict | None:
     """Does learning from confirmed sounds help on later days? A caregiver's "Right" adds that clip to the sound.
 
-    Time order, not random order: the test clips play session by session. Earlier sessions are where people confirm,
-    and only the later sessions are scored, so a clip can't help a near copy of itself from the same sitting.
+    Time order, not random order: test clips play in the order they were recorded (`recorded_at`, one sortable value
+    per clip). The earlier half is where people confirm, and only the later half is scored. Most TORGO speakers
+    have too few sessions to keep the two halves in different sessions, so a later clip can share a session with
+    earlier ones, which is also how real use goes. This measures whether later sounds benefit, not long-term drift.
     Correct guesses get confirmed, and a tired caregiver also confirms a wrong guess `wrong_confirm` of the time, which
-    adds that clip to the wrong sound. Returns None when this person has too few sessions to tell.
+    adds that clip to the wrong sound. Returns None if no episode has enough later clips.
     """
     rng = np.random.default_rng(seed)
     static_acc, adaptive_acc, added, wrongly = [], [], [], []
@@ -196,15 +224,11 @@ def run_adaptive(X, labels, sessions, episode: EpisodeFn, seed: int, trials: int
         ye = np.concatenate([np.full(len(i), k) for k, i in enumerate(ep.enroll)])
         pool = np.concatenate(ep.test)
         truth_of = {int(i): k for k, idx in enumerate(ep.test) for i in idx}
-        days = sorted(set(sessions[pool]))
-        if len(days) < 2:
-            continue
-        cut = max(1, len(days) // 2)
-        earlier = rng.permutation(pool[np.isin(sessions[pool], days[:cut])])
-        later = pool[np.isin(sessions[pool], days[cut:])]
-        order = sorted(earlier, key=lambda i: sessions[i])
+        ordered = pool[np.argsort(recorded_at[pool], kind="stable")]
+        cut = len(ordered) // 2
+        order, later = ordered[:cut], ordered[cut:]
         y_later = np.array([truth_of[int(i)] for i in later])
-        if len(set(y_later)) < 2:
+        if cut == 0 or len(set(y_later)) < 2:
             continue
         grown_X, grown_y = Xe, ye
         bad = 0
