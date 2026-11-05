@@ -38,7 +38,10 @@
     const u = new URL(location.href); u.searchParams.set("p", id); history.replaceState(null, "", u);
   }
 
+  // With no server behind the page, the model runs in this browser (web/engine/localapi.js) behind the same API.
+  let local = null;
   async function api(path, opts = {}, ms = 25000) {
+    if (local) return local.request(path, opts);
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), ms);
     try {
@@ -67,7 +70,9 @@
     if (isPublic) $("profileName").textContent = r.profile.name;
     renderSelfTest(r.calibration || {});
     $("mode").textContent = llmModel ? `voc2vec + ${llmModel}` : "voc2vec";
-    $("leavesNote").textContent = isPublic
+    $("leavesNote").textContent = local
+      ? "Everything stays in this browser. The model runs on your device, and no audio is ever uploaded."
+      : isPublic
       ? `Recordings go only to this Tink server, kept under your private link. Video never leaves your browser.${llmModel ? ` Only the text below goes to ${llmModel}.` : ""}`
       : llmModel
       ? `Audio and video never leave this laptop. Only the text below goes to ${llmModel}.`
@@ -136,6 +141,31 @@
         if (fixedMs) return;
         if (!heardAt && now - t0 > startTimeoutMs) return finish(new Error("silence"));
         if (heardAt && (now - lastLoud > silenceMs || now - heardAt > maxMs)) finish();
+      };
+      src.connect(proc); proc.connect(ctx.destination);
+    });
+  }
+  // Hands-free: no button, no fixed loudness. Waits for the next sound, however long that takes, using a detector
+  // that learns the room's noise floor (web/engine/core.js, mirrored by tink/vad.py). Resolves with a 16 kHz WAV.
+  let detector = null, core = null;
+  async function nextSound() {
+    core = core || await import("./engine/core.js");
+    detector = detector || new core.SegmentDetector();
+    if (!stream || stream.getAudioTracks().every((t) => t.readyState === "ended")) {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
+    }
+    ctx = ctx || new AudioContext();
+    if (ctx.state === "suspended") await ctx.resume();
+    const src = ctx.createMediaStreamSource(stream), proc = ctx.createScriptProcessor(2048, 1, 1);
+    return new Promise((resolve, reject) => {
+      const finish = (fn) => { proc.onaudioprocess = null; src.disconnect(); proc.disconnect(); setLevel(0); fn(); };
+      proc.onaudioprocess = (e) => {
+        if (!$("loop").checked) return finish(() => reject(new Error("stopped")));
+        const d = e.inputBuffer.getChannelData(0);
+        let sum = 0; for (const v of d) sum += v * v;
+        setLevel(Math.min(1, Math.sqrt(sum / d.length) * 12));
+        const [sound] = detector.push(core.toModelRate(new Float32Array(d), Math.round(ctx.sampleRate)));
+        if (sound) finish(() => resolve(new Blob([core.encodeWav(sound)], { type: "audio/wav" })));
       };
       src.connect(proc); proc.connect(ctx.destination);
     });
@@ -228,9 +258,14 @@
     if (muted) return;
     let url = voiceCache.get(name);
     if (!url) {
-      const r = await fetch(`/api/voice/${encodeURIComponent(name)}`, { headers: profileId ? { "X-Tink-Profile": profileId } : {} });
-      if (!r.ok) throw new Error("no banked voice");
-      url = URL.createObjectURL(await r.blob());
+      let blob;
+      if (local) blob = await local.voiceBlob(name);
+      else {
+        const r = await fetch(`/api/voice/${encodeURIComponent(name)}`, { headers: profileId ? { "X-Tink-Profile": profileId } : {} });
+        if (!r.ok) throw new Error("no banked voice");
+        blob = await r.blob();
+      }
+      url = URL.createObjectURL(blob);
       voiceCache.set(name, url);
     }
     player?.pause();
@@ -316,7 +351,7 @@
     try {
       window.TinkCues?.isOn() && window.TinkCues.begin();
       let clip, cues = [];
-      try { clip = await recordClip(); } finally { cues = window.TinkCues?.end() ?? []; }
+      try { clip = await ($("loop").checked ? nextSound() : recordClip()); } finally { cues = window.TinkCues?.end() ?? []; }
       setStage("listening", "Matching the sound");
       const slow = llmModel && setTimeout(() => { statusText.textContent = `Wording it with ${llmModel}`; }, 700);
       const fd = new FormData();
@@ -326,6 +361,12 @@
       try { spoken = showResult(await api("/api/recognize", { method: "POST", body: fd })); } finally { clearTimeout(slow); }
     } catch (e) {
       if (e.message === "silence" && $("loop").checked) { busy = false; $("take").disabled = false; return listen(); }
+      if (e.message === "stopped") {
+        $("listen").querySelector(".lbl").textContent = "Listen";
+        busy = false; $("take").disabled = false; $("listen").disabled = alarmOn || realSounds().length < minSounds;
+        setStage("idle", "Ready");
+        return;
+      }
       setStage("error", "Stopped");
       phrase.textContent = e.message === "silence" ? "I didn't hear anything." : "Something went wrong.";
       why.textContent = micError(e);
@@ -735,6 +776,46 @@
     setTimeout(() => { label.textContent = "Copy private link"; }, 2000);
   });
 
+  // No server: offer to run the model right here. The download is big, so it starts only when someone asks,
+  // unless they already said yes on an earlier visit and it is in the cache.
+  function offerBrowserModel() {
+    setStage("idle", "Runs on your device");
+    phrase.textContent = "Try Tink in this browser.";
+    why.innerHTML = 'The model runs on your device, so no audio is ever uploaded. It downloads once (about <span id="modelSize">120</span> MB).<br><button class="btn listen" id="startLocal" type="button">Load the model</button><br><span class="note">Or run the full server: <code>git clone https://github.com/hammy229/tink && cd tink && uv run uvicorn tink.app:app</code></span>';
+    $("startLocal").addEventListener("click", startBrowserModel);
+    let agreed = false;
+    try { agreed = localStorage.getItem("tink.localModel") === "1"; } catch {}
+    if (agreed) startBrowserModel();
+  }
+  async function startBrowserModel() {
+    const button = $("startLocal");
+    if (button) button.disabled = true;
+    why.setAttribute("role", "status");
+    try {
+      const { LocalApi } = await import("./engine/localapi.js");
+      local = await LocalApi.start({
+        onProgress: (loaded, total, cached) => {
+          setStage("listening", cached ? "Loading the model" : "Downloading the model");
+          why.textContent = cached ? "Found in this browser's cache." : `${Math.round(loaded / 1e6)} of ${Math.round(total / 1e6)} MB. This happens once.`;
+        },
+      });
+      try { localStorage.setItem("tink.localModel", "1"); } catch {}
+      document.body.classList.remove("no-server");
+      document.body.classList.add("in-browser");
+      await refresh();
+      setStage("idle", "Ready");
+      phrase.textContent = "Teach Tink a sound.";
+      why.textContent = `Model ready in ${(local.loadInfo.ms / 1000).toFixed(1)} s, running on this device.`;
+      window.dispatchEvent(new CustomEvent("tink:local-ready", { detail: { ...local.loadInfo, timings: local.timings } }));
+    } catch (e) {
+      local = null;
+      setStage("error", "Couldn't load the model");
+      phrase.textContent = "The model didn't load.";
+      why.innerHTML = `${esc(e.message)}<br><button class="btn listen" id="startLocal" type="button">Try again</button>`;
+      $("startLocal").addEventListener("click", startBrowserModel);
+    }
+  }
+
   (async function start() {
     try {
       await refresh();
@@ -744,9 +825,7 @@
         // No server behind this page (a static copy, or the server is down): say how to run
         // it instead of leaving controls that can only fail.
         document.body.classList.add("no-server");
-        setStage("error", "Not running here");
-        phrase.textContent = "Tink runs on your laptop.";
-        why.innerHTML = 'There is no Tink server behind this page. The model is too big to host here, so run it yourself:<br><code>git clone https://github.com/hammy229/tink && cd tink && uv run uvicorn tink.app:app</code>';
+        offerBrowserModel();
         return;
       }
       // A dead or stale link: forget it, then try without one (a local Tink needs none).

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
+import { MODEL } from "./config.js";
 import * as core from "./core.js";
 
 const fixture = JSON.parse(readFileSync(new URL("../../tests/fixtures/parity.json", import.meta.url)));
@@ -118,4 +119,9 @@ test("voice activity detection finds the same segments as Python", () => {
   for (let i = 0; i < stream.length; i += 1777) lengths.push(...det.push(stream.subarray(i, i + 1777)).map((s) => s.length));
   lengths.push(...det.flush().map((s) => s.length));
   assert.deepEqual(lengths, fixture.vad.segment_lengths);
+});
+
+test("the shipped config pins the model by hash, so the integrity check can't be skipped", () => {
+  assert.match(MODEL.sha256, /^[0-9a-f]{64}$/);
+  assert.match(MODEL.url, /^https:\/\//);
 });
