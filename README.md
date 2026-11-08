@@ -1,16 +1,15 @@
 # Tink
 
+**Learns the few sounds a person who has lost their speech can still make, and says what each one means out loud, in their own banked voice. The model runs in the browser, so no audio leaves the device.**
+
 [![CI](https://github.com/hammy229/tink/actions/workflows/ci.yml/badge.svg)](https://github.com/hammy229/tink/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **[Try it in your browser](https://tink-quen.vercel.app/#demo).** No install and no account. The model runs on your device, so no audio is uploaded.
 
-Tink learns the sounds one person can still make (a hum, two clicks, a sigh) and says out loud what each one means. It's for people who can make sounds but not words: people losing their speech to ALS, stroke survivors, minimally speaking autistic people. While someone can still speak, they can bank their own voice saying each phrase, and Tink plays that recording instead of a computer voice.
-
-It started as my HackTX 26 project. I kept going to find out whether it actually works, and to build it the way it would need to be built if someone relied on it.
-
 **It hasn't been tested with a nonspeaking person using it.** Everything below comes from existing datasets.
 
-## Does it work?
+## Results
 
 Teaching each sound takes a few recordings from one person, with no training across people. The main question is what happens when someone teaches it once and uses it on another day.
 
@@ -31,7 +30,7 @@ So there's a real signal on deliberate sounds, though the top row has only 4 peo
 
 Full results are in [docs/results.md](docs/results.md), which is generated from the raw JSON, and a test fails if the two disagree. How I measured it and what it can't tell you: [docs/accuracy.md](docs/accuracy.md). Model details: [docs/model-card.md](docs/model-card.md).
 
-## Decisions the data changed
+### Decisions the data changed
 
 These are the parts I'd most want to talk about, as most of them are things I got wrong first.
 
@@ -42,6 +41,12 @@ These are the parts I'd most want to talk about, as most of them are things I go
 - **The bigger number wasn't the right choice.** HuBERT beats voc2vec by about 9 points on words, and voc2vec wins on non-verbal sound, so [I kept voc2vec](docs/adr/0003-keep-voc2vec-over-hubert.md), since Tink is for sounds that aren't words.
 
 All of the ADRs are in [docs/adr](docs/adr).
+
+## Why it matters
+
+Tink learns the sounds one person can still make (a hum, two clicks, a sigh) and says out loud what each one means. It's for people who can make sounds but not words: people losing their speech to ALS, stroke survivors, minimally speaking autistic people. While someone can still speak, they can bank their own voice saying each phrase, and Tink plays that recording instead of a computer voice.
+
+It started as my HackTX 26 project. I kept going to find out whether it actually works, and to build it the way it would need to be built if someone relied on it.
 
 ## How it works
 
@@ -65,8 +70,6 @@ There are two ways to run the same logic:
 
 Two implementations can drift apart, so a fixture generated from the Python code is checked by both pytest and `node:test`.
 
-## Engineering
-
 | Area | What's there | Evidence |
 |---|---|---|
 | **Model deployment** | ONNX export, int8 quantization from 378 MB to 122 MB, hash-pinned download | Loses about 0.1 points against PyTorch on the real benchmarks. 143 ms per embedding in WebAssembly. A test blocks pinning a model with no passing report. |
@@ -75,9 +78,12 @@ Two implementations can drift apart, so a fixture generated from the Python code
 | **Real time** | Voice activity detection that learns the room's noise floor, so someone who can't press a button can use it | Tested on a scripted stream with a fan, and end to end in Chromium. |
 | **Reliability** | Atomic writes, embeddings cached by model, requests queued in the browser, recovery from a dead worker or corrupt cache | A test proves a crash mid-write keeps the old file. |
 | **Security and privacy** | Content security policy, SRI, upload limits checked before decoding, stream limits, rate limits that forged headers can't dodge, no phrases in logs | The end-to-end test checks that no request carries audio, and serves production's real headers. |
-| **Testing** | 100+ pytest tests, parity tests, a real-model browser test, CI with lint, types, coverage, and commit checks | `uv run pytest`, `npm test`, `npm run e2e` |
 
-## Run it
+## Tech stack
+
+Python, FastAPI, PyTorch, voc2vec (HuBERT-based), ONNX Runtime Web in a Web Worker, int8 quantization, IndexedDB, plain HTML, CSS, and JavaScript, pytest, `node:test`, Playwright with Chromium, uv, Docker, Vercel, GitHub Actions.
+
+## Getting started
 
 The browser version needs nothing. To run the server, you need [uv](https://docs.astral.sh/uv/). The first run downloads the model (about 360 MB).
 
@@ -95,31 +101,7 @@ uv run uvicorn tink.app:app --reload     # then open http://localhost:8000 in Ch
 
 To stream from a device with no screen, send 16 kHz mono 16-bit PCM to `ws://host/api/listen` and get one JSON turn back per sound. API docs are at `/docs` on a running server.
 
-## Reproduce the results
-
-```bash
-uv run --group eval python -m evals.embed recanvo path/to/ReCANVo
-uv run --group eval python -m evals.embed torgo path/to/TORGO
-uv run --group eval python -m evals.run --recanvo path/to/ReCANVo --torgo path/to/TORGO
-uv run --group eval python -m evals.render
-
-uv run --group export python -m scripts.export_onnx --layers 12 --clips path/to/wavs
-uv run --group eval --group export python -m evals.onnx_gate models/voc2vec-l12.int8.onnx --layer 12 --recanvo path/to/ReCANVo --torgo path/to/TORGO
-```
-
-## Layout
-
-```
-tink/         server: audio, embeddings, scoring, Bayes, turn decisions, voice activity, API
-web/engine/   the same logic in the browser, the model worker, and the local API
-web/          the site and app (plain HTML, CSS, and JS, no build step)
-evals/        benchmarks, metrics, the trained head, the model gate, and the report
-scripts/      ONNX export, load test, parity fixture
-tests/ e2e/   pytest, and the real model in real Chromium
-docs/         results, accuracy, model card, ADRs
-```
-
-## Settings
+### Settings
 
 | Env var | Default | What it does |
 |---|---|---|
@@ -132,6 +114,49 @@ docs/         results, accuracy, model card, ADRs
 | `TINK_TRUST_PROXY` | unset | `1` only behind a proxy you run |
 | `XAI_API_KEY` | unset | Optional LLM wording and translation, off by default. Without it, no text or audio goes anywhere. |
 
-## Credits
+## Project structure
 
-Made by [Arham Doshi](https://github.com/hammy229). Built on [voc2vec](https://ieeexplore.ieee.org/document/10890672) (Koudounas et al., ICASSP 2025, Apache 2.0). Evaluated on [ReCANVo](https://doi.org/10.5281/zenodo.5786860) (Narain and Johnson, 2021) and [TORGO](https://www.cs.toronto.edu/~complingweb/data/TORGO/torgo.html) (Rudzicz, Namasivayam, and Wolff, 2012, doi:10.1007/s10579-011-9145-0). The hackathon write-up is in [docs/archive](docs/archive).
+```
+tink/         server: audio, embeddings, scoring, Bayes, turn decisions, voice activity, API
+web/engine/   the same logic in the browser, the model worker, and the local API
+web/          the site and app (plain HTML, CSS, and JS, no build step)
+evals/        benchmarks, metrics, the trained head, the model gate, and the report
+scripts/      ONNX export, load test, parity fixture
+tests/ e2e/   pytest, and the real model in real Chromium
+docs/         results, accuracy, model card, ADRs
+```
+
+## Testing
+
+```bash
+uv run pytest        # server, evals, and parity tests
+npm test             # browser engine and parity tests
+npm run e2e          # the real model in real Chromium
+```
+
+- 100+ pytest tests, parity tests, a real-model browser test, CI with lint, types, coverage, and commit checks.
+
+To reproduce every number in Results from the datasets:
+
+```bash
+uv run --group eval python -m evals.embed recanvo path/to/ReCANVo
+uv run --group eval python -m evals.embed torgo path/to/TORGO
+uv run --group eval python -m evals.run --recanvo path/to/ReCANVo --torgo path/to/TORGO
+uv run --group eval python -m evals.render
+
+uv run --group export python -m scripts.export_onnx --layers 12 --clips path/to/wavs
+uv run --group eval --group export python -m evals.onnx_gate models/voc2vec-l12.int8.onnx --layer 12 --recanvo path/to/ReCANVo --torgo path/to/TORGO
+```
+
+## Limitations and next steps
+
+- It has not been tested with a nonspeaking person using it. Every number comes from existing datasets.
+- The strongest result, deliberate sounds on another day, comes from only 4 dysarthric speakers.
+- Spontaneous sounds mostly do not carry their meaning, so Tink asks when unsure and is not reliable enough to depend on alone.
+- How it was measured and what the numbers cannot tell you: [docs/accuracy.md](docs/accuracy.md). Model details: [docs/model-card.md](docs/model-card.md).
+
+## License
+
+MIT, see [LICENSE](LICENSE). Built by [Arham Doshi](https://arhamdoshi.dev).
+
+Built on [voc2vec](https://ieeexplore.ieee.org/document/10890672) (Koudounas et al., ICASSP 2025, Apache 2.0). Evaluated on [ReCANVo](https://doi.org/10.5281/zenodo.5786860) (Narain and Johnson, 2021) and [TORGO](https://www.cs.toronto.edu/~complingweb/data/TORGO/torgo.html) (Rudzicz, Namasivayam, and Wolff, 2012, doi:10.1007/s10579-011-9145-0). The hackathon write-up is in [docs/archive](docs/archive).
