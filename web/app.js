@@ -317,8 +317,8 @@
     phrase.textContent = text;
     if (still || !text.trim()) return;
     phrase.animate([
-      { clipPath: "inset(-12% 100% -12% 0)", transform: "translateY(5px)", filter: "drop-shadow(5px 7px 0 rgba(21,17,14,.28))" },
-      { clipPath: "inset(-12% 0 -12% 0)", transform: "translateY(0)", filter: "drop-shadow(0 0 0 rgba(21,17,14,0))" },
+      { clipPath: "inset(-12% 100% -12% 0)", transform: "translateY(5px)", filter: "drop-shadow(5px 7px 0 rgba(42,31,45,.28))" },
+      { clipPath: "inset(-12% 0 -12% 0)", transform: "translateY(0)", filter: "drop-shadow(0 0 0 rgba(42,31,45,0))" },
     ], { duration: 640, delay, easing: EASE, fill: "backwards" });
     // The blade is placed when the cut starts, after the ranking and the rest of the result have laid out.
     setTimeout(() => requestAnimationFrame(() => {
@@ -758,7 +758,7 @@
     light.addColorStop(1, "rgba(255,248,230,0)");
     g.fillStyle = light; g.fillRect(0, 0, W, H);
     const edge = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
-    edge.addColorStop(0, "rgba(17,17,17,0)"); edge.addColorStop(1, `rgba(17,17,17,${lit ? 0.08 : 0.04})`);
+    edge.addColorStop(0, "rgba(42,31,45,0)"); edge.addColorStop(1, `rgba(42,31,45,${lit ? 0.08 : 0.04})`);
     g.fillStyle = edge; g.fillRect(0, 0, W, H);
     if (!reduce) requestAnimationFrame(frame);
   }
