@@ -1,4 +1,4 @@
-// The landing page's small motions: headline letters turn red under the cursor, and
+// The landing page's small motions: headline letters turn coral under the cursor, and
 // sections fade up once as they scroll in. Decorative only; off for reduced motion.
 (() => {
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
