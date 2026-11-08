@@ -55,7 +55,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: node --test web/engine/
+      - run: node --test web/engine/*.test.mjs
 
   e2e:
     name: Real model in real Chromium
@@ -80,4 +80,4 @@ jobs:
           npx playwright install --with-deps chromium
           mkdir -p models
           curl -fsSL "$MODEL_URL" -o models/voc2vec-l12.int8.onnx
-          node --test --test-timeout=600000 e2e/
+          node --test --test-timeout=600000 e2e/*.test.mjs
