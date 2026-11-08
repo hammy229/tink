@@ -138,8 +138,8 @@ body.speaking .top, body.speaking .side, body.speaking .lower, body.speaking .pa
 /* the paper-cut reveal is driven from app.js (castPhrase); the blade is its cutting edge */
 .center { position: relative; }
 .blade { position: absolute; top: 0; width: 3px; border-radius: 2px; background: var(--ink); pointer-events: none; }
-.why { font-size: 16.5px; min-height: 1.5em; max-width: 54ch; color: var(--ink); opacity: .82; }
-.why b { opacity: 1; }
+.why { font-size: 16.5px; min-height: 1.5em; max-width: 54ch; color: color-mix(in srgb, var(--ink) 82%, transparent); }
+.why b { color: var(--ink); }
 .conf { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
 /* first run: a real sequence, so it is numbered */
