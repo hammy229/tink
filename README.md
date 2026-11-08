@@ -5,6 +5,8 @@
 [![CI](https://github.com/hammy229/tink/actions/workflows/ci.yml/badge.svg)](https://github.com/hammy229/tink/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+**Links:** [Live demo](https://tink-quen.vercel.app/#demo) · [Full results](docs/results.md) · [How accuracy was measured](docs/accuracy.md) · [Model card](docs/model-card.md) · [Design decisions](docs/adr) · [Arham Doshi](https://arhamdoshi.dev) · [LinkedIn](https://linkedin.com/in/arhamdoshi)
+
 **[Try it in your browser](https://tink-quen.vercel.app/#demo).** No install and no account. The model runs on your device, so no audio is uploaded.
 
 **It hasn't been tested with a nonspeaking person using it.** Everything below comes from existing datasets.
