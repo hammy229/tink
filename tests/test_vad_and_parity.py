@@ -17,8 +17,28 @@ def segments(*parts: np.ndarray) -> list[np.ndarray]:
     return det.push(np.concatenate(parts)) + det.flush()
 
 
+def assert_close(got: object, want: object, path: str = "") -> None:
+    """Equal structure and strings, numbers within 1e-5: BLAS on Linux and macOS can differ in the 6th decimal."""
+    if isinstance(want, dict):
+        assert isinstance(got, dict) and got.keys() == want.keys(), path
+        for k in want:
+            assert_close(got[k], want[k], f"{path}.{k}")
+    elif isinstance(want, list):
+        assert isinstance(got, list) and len(got) == len(want), path
+        for i, (g, w) in enumerate(zip(got, want, strict=True)):
+            assert_close(g, w, f"{path}[{i}]")
+    elif isinstance(want, float) or isinstance(got, float):
+        assert abs(float(got) - float(want)) <= 1e-5, f"{path}: {got} != {want}"  # type: ignore[arg-type]
+    else:
+        assert got == want, path
+
+
 def test_fixture_is_current():
-    assert json.loads(OUT.read_text()) == json.loads(json.dumps(build())), "run: uv run python -m scripts.gen_parity"
+    want = json.loads(json.dumps(build()))
+    try:
+        assert_close(json.loads(OUT.read_text()), want)
+    except AssertionError as e:
+        raise AssertionError(f"{e}; run: uv run python -m scripts.gen_parity") from e
 
 
 def test_finds_one_sound_and_keeps_its_onset():
