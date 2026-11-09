@@ -186,6 +186,26 @@
     </ol>
     <p class="measured"><span class="eyebrow">Measured</span> On repeated words from 4 people with dysarthria, taught once and tried on another day, Tink picks the right one of 5 about 62% of the time, against 20% by chance. On spontaneous sounds from 8 minimally speaking people, where the meaning is a state of mind, it gets 27% against 19%. It has not been tested with people using it to communicate. <a class="arrow-link" href="https://github.com/hammy229/tink/blob/main/docs/accuracy.md" target="_blank" rel="noreferrer"><span>Read the method</span><span aria-hidden="true">→</span></a></p>
   </section>
+
+  <section class="routing" id="routing" aria-labelledby="routing-title">
+    <div class="section-head"><span class="eyebrow">Measured, not shipped</span><h2 id="routing-title" data-letters>When should a device ask for help?</h2></div>
+    <div class="routing-body">
+      <p class="routing-lead">On-device AI is meant to hand hard cases to a bigger model in the cloud when it is unsure. Tink can measure what that is worth: the small model in this page answers when its own confidence is high, and the unsure sounds go to a full-precision model instead. On dysarthric speech from 7 people, that sent a quarter of the sounds and won back 60% of the gap.</p>
+      <figure class="routing-bars" aria-label="Accuracy on dysarthric speech: device only 76.5 percent, routed 81.8 percent, server only 85.3 percent">
+        <div class="routing-bar"><span>Device only</span><i style="--w:76.5%"></i><b>76.5%</b></div>
+        <div class="routing-bar is-routed"><span>Routed, 25% of sounds sent</span><i style="--w:81.8%"></i><b>81.8%</b></div>
+        <div class="routing-bar"><span>Server only</span><i style="--w:85.3%"></i><b>85.3%</b></div>
+        <figcaption>Right meaning picked, out of 5, on dysarthric speech in any session</figcaption>
+      </figure>
+      <dl class="ledger routing-facts">
+        <div><dt>Against sending the same share at random</dt><dd>+1.9 points [+1.0, +2.6]</dd></div>
+        <div><dt>The same threshold, person by person</dt><dd>sent 0% to 55% of their sounds</dd></div>
+        <div><dt>Tested on another day, 4 people</dt><dd>+4.1 points, too few people to be sure</dd></div>
+        <div><dt>Spontaneous sounds</dt><dd>nothing to gain: the server is no better</dd></div>
+      </dl>
+      <p class="measured"><span class="eyebrow">Honest limits</span> The “server” here is a full-precision model the same size as Tink’s, not a bigger one. The edge over random is small. And this is a measurement only: Tink itself still sends nothing anywhere. <a class="arrow-link" href="https://github.com/hammy229/tink/blob/main/docs/results.md" target="_blank" rel="noreferrer"><span>Every number and how it was made</span><span aria-hidden="true">→</span></a></p>
+    </div>
+  </section>
 </div>
 
 <footer class="site-footer">

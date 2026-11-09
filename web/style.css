@@ -520,3 +520,22 @@ body.present .app-region .wrap { padding-inline: 28px; }
 @media (prefers-reduced-motion: reduce) {
   .motion-ready .reveal { opacity: 1; transform: none; }
 }
+
+/* Routing: what sending unsure sounds to a bigger model is worth */
+.routing { padding-block: 120px; border-top: 1px solid var(--line); }
+.routing-body { margin-top: 48px; display: grid; gap: 40px; max-width: 900px; }
+.routing-lead { margin: 0; max-width: 760px; color: var(--fg); font-size: 18px; line-height: 1.6; }
+.routing-bars { margin: 0; display: grid; gap: 14px; }
+.routing-bar { display: grid; grid-template-columns: minmax(150px, 220px) 1fr 64px; align-items: center; gap: 16px; }
+.routing-bar span { color: var(--muted); font-size: 15px; }
+.routing-bar i { display: block; height: 14px; width: var(--w); border-radius: 2px; background: color-mix(in srgb, var(--ink) 22%, transparent); }
+.routing-bar.is-routed i { background: var(--teal); }
+.routing-bar.is-routed span { color: var(--ink); }
+.routing-bar b { font-family: var(--mono); font-weight: 500; font-size: 14px; color: var(--ink); text-align: right; }
+.routing-bars figcaption { margin-top: 6px; color: var(--muted); font-size: 13px; font-family: var(--mono); }
+.routing-facts { margin: 0; grid-column: auto; }
+.site-shell .routing .measured { margin-top: 0; }
+@media (max-width: 640px) {
+  .routing-bar { grid-template-columns: 1fr 56px; }
+  .routing-bar span { grid-column: 1 / -1; }
+}
