@@ -280,7 +280,7 @@ def test_the_pinned_browser_model_has_a_passing_gate_report():
 def test_published_numbers_match_the_raw_results():
     from evals import render
 
-    report, load, gates = render.load_all()
-    assert render.DOC.read_text() == render.render(report, load, gates), "run: python -m evals.render"
+    report, load, gates, routing = render.load_all()
+    assert render.DOC.read_text() == render.render(report, load, gates, routing), "run: python -m evals.render"
     readme = (render.ROOT / "README.md").read_text()
     assert render.with_readme_block(readme, report) == readme, "run: python -m evals.render"
