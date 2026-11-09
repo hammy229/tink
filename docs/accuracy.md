@@ -51,6 +51,10 @@ Accuracy is balanced (the average of per-class recall), so common sounds can't h
 
 **Asking is worth a lot.** Tink asks about one meaning at a time, best guess first, so the number of questions is the rank of the right answer. On the headline benchmark the right answer is within 2 questions 84% of the time, up from 62% on the first try.
 
+**Sending only the unsure sounds to a server model gets most of its gain for a quarter of the traffic, but only on words.** Tink runs on the device, and plenty of apps would rather answer locally and fall back to a server only when the local model is unsure. So I measured that split with the exact int8 file the browser downloads on the device and HuBERT, which is better on words, standing in for the server. The device answers when its own confidence (fitted on the enrolled takes alone) clears a threshold and sends the rest. With a 30% budget set before the run, and each person's threshold picked from everyone else, dysarthric speech in any session sent 25% of each person's sounds on average and went from 76.5% to 81.8%, where sending everything gets 85.3%. That's 60% of the server's gain, a ratio of means with no interval of its own. Sending the same share at random gets 79.9%, so confidence does pick the right sounds, though by only 1.9 points. On another day it gained 4.1 points, which 4 people can't confirm. On spontaneous sounds the server model is worse, so routing does nothing there.
+
+**One threshold doesn't give one fallback rate.** With the same rule, the share of sounds each person sent ranged from 0% to 55% on dysarthric speech and from 1% to 96% on control speakers. A budget that holds on average across people doesn't hold for any one person, so a fleet would need to watch fallback per person, not just overall. Run `python -m evals.routing` to reproduce it. Tink itself still never sends audio anywhere.
+
 ## What this can't tell you
 
 - It hasn't been tested with a nonspeaking person using it.

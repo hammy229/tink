@@ -76,6 +76,7 @@ Two implementations can drift apart, so a fixture generated from the Python code
 |---|---|---|
 | **Model deployment** | ONNX export, int8 quantization from 378 MB to 122 MB, hash-pinned download | Loses about 0.1 points against PyTorch on the real benchmarks. 143 ms per embedding in WebAssembly. A test blocks pinning a model with no passing report. |
 | **Evaluation** | Paired comparisons, person-level bootstrap, exact sign-flip test, calibration, conformal, label-shuffle check, promotion gates | [results.md](docs/results.md) |
+| **Local first, server when unsure** | A benchmark of answering on the device and sending only unsure sounds to a full-precision model on a server, with each person's threshold set from other people ([evals/routing.py](evals/routing.py)) | On dysarthric speech, sending 25% of sounds gets 60% of the server's gain, 76.5% to 81.8% against 85.3%, and beats sending as many at random. The share each person sends ranges from 0% to 55%. |
 | **Concurrency** | Inference on worker threads, a lock per person, one lock around the model ([ADR 6](docs/adr/0006-inference-off-the-event-loop.md)) | With 16 clients on one laptop: 58 requests per second, p95 342 ms, no errors, and `/healthz` p95 3 ms while the model is busy. |
 | **Real time** | Voice activity detection that learns the room's noise floor, so someone who can't press a button can use it | Tested on a scripted stream with a fan, and end to end in Chromium. |
 | **Reliability** | Atomic writes, embeddings cached by model, requests queued in the browser, recovery from a dead worker or corrupt cache | A test proves a crash mid-write keeps the old file. |
@@ -148,6 +149,8 @@ uv run --group eval python -m evals.render
 
 uv run --group export python -m scripts.export_onnx --layers 12 --clips path/to/wavs
 uv run --group eval --group export python -m evals.onnx_gate models/voc2vec-l12.int8.onnx --layer 12 --recanvo path/to/ReCANVo --torgo path/to/TORGO
+uv run --group eval python -m evals.routing --recanvo path/to/ReCANVo --torgo path/to/TORGO
+uv run --group eval python -m evals.render
 ```
 
 ## Limitations and next steps
