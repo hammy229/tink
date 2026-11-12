@@ -28,6 +28,7 @@
   <div class="rail-links">
     <a href="#top" aria-current="page">Home</a>
     <a href="#how">How it works</a>
+    <a href="#watch">Watch</a>
     <a href="#demo">Try it</a>
     <a href="#privacy">Privacy</a>
   </div>
@@ -37,7 +38,7 @@
 <header class="topbar">
   <nav aria-label="Primary">
     <a class="rail-mark" href="#top" aria-label="Tink home"><svg><use href="#mark"/></svg></a>
-    <div class="topbar-links"><a href="#top" aria-current="page">Home</a><span aria-hidden="true">·</span><a href="#how">How</a><span aria-hidden="true">·</span><a href="#demo">Try it</a><span aria-hidden="true">·</span><a href="#privacy">Privacy</a></div>
+    <div class="topbar-links"><a href="#top" aria-current="page">Home</a><span aria-hidden="true">·</span><a href="#how">How</a><span aria-hidden="true">·</span><a href="#watch">Watch</a><span aria-hidden="true">·</span><a href="#demo">Try it</a><span aria-hidden="true">·</span><a href="#privacy">Privacy</a></div>
   </nav>
 </header>
 
@@ -89,6 +90,16 @@
         <li><span class="step-n">02</span><h3>Make the sound</h3><p>Tink compares it with that person’s sounds and shows how sure it is, including “I don’t know.”</p></li>
         <li><span class="step-n">03</span><h3>Hear the meaning</h3><p>Tink plays the phrase in their banked voice, or reads it aloud if none is banked yet.</p></li>
       </ol>
+    </section>
+
+    <section class="reel-section" id="watch" aria-labelledby="watch-title">
+      <div class="section-head"><span class="eyebrow">Watch it</span><h2 id="watch-title" data-letters>See it work first.</h2><p>Each clip is the app below, recorded in headless Chrome. The sounds going into the mic are synthesized clips, not a real person. The teaching clip plays at 2x, and nothing else is changed.</p></div>
+      <div class="reel">
+        <figure><div class="reel-frame"><video src="demo/teach.mp4" poster="demo/teach.jpg" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1"></video></div><figcaption><h3>Teach a sound</h3><p>Type what the sound is and what it means, then record it five times. This clip plays at 2x.</p></figcaption></figure>
+        <figure><div class="reel-frame"><video src="demo/listen.mp4" poster="demo/listen.jpg" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1"></video></div><figcaption><h3>It says what they mean</h3><p>A low hum becomes “I’m thirsty.” and two clicks become “Please call my mom.”, with how sure Tink is.</p></figcaption></figure>
+        <figure><div class="reel-frame"><video src="demo/ask.mp4" poster="demo/ask.jpg" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1"></video></div><figcaption><h3>It asks instead of guessing</h3><p>An in-between sound gets a question, and the person answers with their yes sound.</p></figcaption></figure>
+        <figure><div class="reel-frame"><video src="demo/urgent.mp4" poster="demo/urgent.jpg" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1"></video></div><figcaption><h3>Urgent sounds raise an alarm</h3><p>The alarm keeps going until someone presses I’m here. Then the caregiver types a reply for Tink to say.</p></figcaption></figure>
+      </div>
     </section>
 
     <section class="demo-intro" id="demo" aria-labelledby="demo-title">
@@ -211,7 +222,7 @@
 <footer class="site-footer">
   <div class="footer-inner">
     <div class="footer-brand"><a href="#top"><svg class="footer-mark"><use href="#mark"/></svg><span>Tink</span></a><p>Sound-to-speech for people who can’t use words</p></div>
-    <div class="footer-links"><a href="#top">Home</a><span aria-hidden="true">·</span><a href="#how">How it works</a><span aria-hidden="true">·</span><a href="#demo">Try it</a><span aria-hidden="true">·</span><a href="#privacy">Privacy</a><span aria-hidden="true">·</span><a href="https://github.com/hammy229/tink" target="_blank" rel="noreferrer">GitHub</a></div>
+    <div class="footer-links"><a href="#top">Home</a><span aria-hidden="true">·</span><a href="#how">How it works</a><span aria-hidden="true">·</span><a href="#watch">Watch</a><span aria-hidden="true">·</span><a href="#demo">Try it</a><span aria-hidden="true">·</span><a href="#privacy">Privacy</a><span aria-hidden="true">·</span><a href="https://github.com/hammy229/tink" target="_blank" rel="noreferrer">GitHub</a></div>
     <div class="footer-meta"><p>Made by <a href="https://github.com/hammy229" target="_blank" rel="noreferrer">Arham Doshi</a></p><p>Built at HackTX ’26 · Austin, TX</p></div>
   </div>
 </footer>

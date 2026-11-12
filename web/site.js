@@ -48,3 +48,16 @@
     observer.observe(el);
   });
 })();
+
+// Demo clips play only while on screen, and never on their own for people who asked for less motion.
+(() => {
+  const videos = document.querySelectorAll(".reel video");
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    videos.forEach((v) => { v.controls = true; v.removeAttribute("aria-hidden"); v.removeAttribute("tabindex"); });
+    return;
+  }
+  const observer = new IntersectionObserver((entries) => {
+    for (const e of entries) { if (e.isIntersecting) e.target.play().catch(() => {}); else e.target.pause(); }
+  }, { threshold: 0.4 });
+  videos.forEach((v) => observer.observe(v));
+})();

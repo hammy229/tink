@@ -433,6 +433,16 @@ a { color: inherit; text-decoration: none; }
 .step-list li + li, .pipeline li + li { padding-left: 32px; border-left: 1px solid var(--line); }
 .step-n { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; color: var(--muted); }
 
+.reel-section { padding-block: 120px; border-top: 1px solid var(--line); }
+.site-shell .reel-section .section-head p { max-width: 560px; margin: 0; color: var(--muted); }
+.reel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 56px 40px; margin-top: 64px; }
+.reel figure { margin: 0; }
+.reel-frame { aspect-ratio: 4 / 5; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--house); }
+.reel video { display: block; width: 100%; height: 100%; object-fit: contain; }
+.reel figcaption { margin-top: 20px; }
+.reel figcaption h3 { margin: 0; }
+.site-shell .reel figcaption p { margin: 8px 0 0; max-width: 34em; color: var(--muted); }
+
 .demo-intro { display: grid; gap: 16px; padding-block: 120px 48px; border-top: 1px solid var(--line); }
 .site-shell .demo-intro p { max-width: 560px; margin: 0; }
 
@@ -506,6 +516,8 @@ body.present .app-region .wrap { padding-inline: 28px; }
   .step-list li + li, .pipeline li + li { border-top: 1px solid var(--line); }
   .steps, .privacy, .tech { padding-block: 72px; }
   .demo-intro { padding-block: 72px 32px; }
+  .reel-section { padding-block: 72px; }
+  .reel { grid-template-columns: 1fr; gap: 48px; margin-top: 40px; }
   .ledger div { flex-direction: column; gap: 2px; }
   .ledger dd { text-align: left; }
   .app-region .wrap { padding-inline: 16px; }
